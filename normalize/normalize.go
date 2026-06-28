@@ -184,7 +184,7 @@ func validateField(idx schema.Index, parentType schema.TypeNameInput, field *ast
 	}
 	fieldInput := schema.FieldNameInput(field.Name)
 	if !idx.HasField(parentType, fieldInput) {
-		return ErrBuildSchemaIndex.With(nil, keyType, string(parentType), keyField, field.Name)
+		return schema.ErrUnknownField.With(nil, keyType, string(parentType), keyField, field.Name)
 	}
 	if len(field.SelectionSet) == 0 {
 		return nil

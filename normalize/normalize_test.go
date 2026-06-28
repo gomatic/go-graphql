@@ -38,7 +38,7 @@ func TestProcessErrorsAndSchema(t *testing.T) {
 	}{
 		{name: "empty query", query: "", wantErr: ErrEmptyQuery},
 		{name: "invalid syntax", query: "{ invalid", wantErr: ErrQueryParse},
-		{name: "missing field", query: "{ nonExistentField { id } }", wantErr: ErrBuildSchemaIndex},
+		{name: "missing field", query: "{ nonExistentField { id } }", wantErr: schema.ErrUnknownField},
 		{name: "valid simple query", query: "{ bomResolve(id: \"a\") { id } }", wantSchema: "bom"},
 	}
 
@@ -247,17 +247,58 @@ func TestProcessInlineFragment(t *testing.T) {
 	t.Parallel()
 
 	// The sibling leaf field next to the inline fragment forces the selection-set
-	// sort to compare a Field against a non-Field.
-	result, err := Process(nilSchemaIndex{}, `{ bomResolve { id ... on BomResult { name } } }`)
+	// sort to compare a Field against a non-Field. The inline fragment carries a
+	// directive and comments that normalize must strip, while preserving the
+	// fragment itself and walking its inner selection.
+	result, err := Process(nilSchemaIndex{}, `{
+  bomResolve {
+    id
+    # inline comment
+    ... on BomResult @include(if: true) {
+      # nested comment
+      name
+    }
+  }
+}`)
 	require.NoError(t, err)
+
+	out := string(result.Query())
+	// The inline fragment survives and its inner selection is walked.
+	assert.Contains(t, out, "... on BomResult")
+	assert.Contains(t, out, "name")
+	// The sibling leaf field is kept alongside the fragment.
+	assert.Contains(t, out, "id")
+	// Directives and comments are stripped from the rewritten selection.
+	assert.NotContains(t, out, "@include")
+	assert.NotContains(t, out, "comment")
+	// No literals, so no variables are minted.
+	assert.Empty(t, result.Variables())
 	assert.Equal(t, schema.Schema("nilschema"), result.Schema())
 }
 
 func TestProcessFragmentSpread(t *testing.T) {
 	t.Parallel()
 
-	result, err := Process(nilSchemaIndex{}, `{ bomResolve { ...F } } fragment F on BomResult { id }`)
+	// The spread carries a directive and a comment that normalize strips, while
+	// the spread reference and the fragment definition both survive in the output.
+	result, err := Process(nilSchemaIndex{}, `{
+  bomResolve {
+    # spread comment
+    ...F @include(if: true)
+  }
+}
+fragment F on BomResult { id }`)
 	require.NoError(t, err)
+
+	out := string(result.Query())
+	// The spread reference and its fragment definition are both preserved.
+	assert.Contains(t, out, "... F")
+	assert.Contains(t, out, "fragment F on BomResult")
+	// The spread's directive and comment are stripped.
+	assert.NotContains(t, out, "@include")
+	assert.NotContains(t, out, "comment")
+	// No literals, so no variables are minted.
+	assert.Empty(t, result.Variables())
 	assert.Equal(t, schema.Schema("nilschema"), result.Schema())
 }
 
@@ -297,10 +338,18 @@ func TestProcessMutationUsesMutationRoot(t *testing.T) {
 func TestProcessNestedSelectionUsesListElementType(t *testing.T) {
 	t.Parallel()
 
+	// instances returns [Instance!]!; the nested selection must be resolved
+	// against the list's ELEMENT type (Instance), not the list wrapper, or fiName
+	// would be an unknown field. We assert fiName resolved as a child of instances.
 	idx := newIndex(t, "bom", `type Query { instances: [Instance!]! }
 type Instance { fiName: String }`)
-	_, err := Process(idx, `{ instances { fiName } }`)
+	result, err := Process(idx, `{ instances { fiName } }`)
 	require.NoError(t, err)
+
+	byName := result.FieldPathsByName()
+	assert.Equal(t, []string{"instances.fiName"}, byName["fiName"])
+	assert.Equal(t, []string{"instances.fiName"}, byName["instances"])
+	assert.Contains(t, string(result.Query()), "instances { fiName }")
 }
 
 func TestProcessJSONScalarNestedObjectInfersTypes(t *testing.T) {
@@ -342,18 +391,49 @@ func TestProcessClearsBadVariableDeclarations(t *testing.T) {
 	idx := newIndex(t, "bom", bomBody)
 
 	tests := []struct {
-		name  string
-		query QueryInput
+		wantVars     VariableMap
+		wantVarTypes VariableTypeMap
+		name         string
+		query        QueryInput
+		notInQuery   string
 	}{
-		{name: "duplicate variable name", query: `query ($var1: ID!, $var1: ID!) { bomResolve(id: $var1) { id } }`},
-		{name: "unused declared variables", query: `query ($var1: ID!, $var2: Int!) { bomResolve(id: "literal-id") { id } }`},
+		{
+			// Two declarations of $var1 in the input; the rebuilt definition list
+			// declares it exactly once (one declaration + one usage == two tokens).
+			name:         "duplicate variable name collapses to one declaration",
+			query:        `query ($var1: ID!, $var1: ID!) { bomResolve(id: $var1) { id } }`,
+			wantVars:     VariableMap{"var1": ""},
+			wantVarTypes: VariableTypeMap{"var1": "ID!"},
+		},
+		{
+			// $var1 and $var2 are declared but unused; the literal id mints a fresh
+			// var1 and the unused $var2 declaration is dropped entirely.
+			name:         "unused declared variables are dropped",
+			query:        `query ($var1: ID!, $var2: Int!) { bomResolve(id: "literal-id") { id } }`,
+			wantVars:     VariableMap{"var1": "literal-id"},
+			wantVarTypes: VariableTypeMap{"var1": "ID!"},
+			notInQuery:   "$var2",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := Process(idx, tt.query)
+			result, err := Process(idx, tt.query)
 			require.NoError(t, err)
+
+			// VariableDefinitions are cleared and rebuilt purely from the variables
+			// the rewrite actually used, so duplicates and unused declarations vanish.
+			assert.Equal(t, tt.wantVars, result.Variables())
+			assert.Equal(t, tt.wantVarTypes, result.VariableTypes())
+
+			out := string(result.Query())
+			// $var1 appears exactly twice: one rebuilt declaration and one usage,
+			// proving the duplicate/extra declarations were not carried through.
+			assert.Equal(t, 2, strings.Count(out, "$var1"))
+			if tt.notInQuery != "" {
+				assert.NotContains(t, out, tt.notInQuery)
+			}
 		})
 	}
 }

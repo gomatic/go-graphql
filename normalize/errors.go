@@ -4,7 +4,6 @@ import errs "github.com/gomatic/go-error"
 
 // Sentinel errors this package can return. Match them with errors.Is, not by string.
 const (
-	ErrBuildSchemaIndex      errs.Const = "build schema index"
 	ErrEmptyQuery            errs.Const = "empty query"
 	ErrGraphQLTypeUnresolved errs.Const = "unresolved type"
 	ErrGraphQLValidation     errs.Const = "schema validation"
