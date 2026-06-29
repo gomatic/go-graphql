@@ -18,6 +18,7 @@ type Composite struct {
 	indexes    map[Schema]Index
 	queryField fieldSchemaMap
 	primary    Schema
+	order      []Schema
 }
 
 // Compile-time check that Composite satisfies Index.
@@ -34,6 +35,7 @@ func NewComposite(order []Schema, sdls map[Schema]graphql.SDL) (*Composite, erro
 	}
 	c := &Composite{
 		indexes:    make(map[Schema]Index, len(order)),
+		order:      append([]Schema(nil), order...),
 		primary:    order[0],
 		queryField: make(fieldSchemaMap),
 	}
@@ -114,20 +116,24 @@ func (c Composite) ForSchema(s Schema) Index {
 	return c.indexes[s]
 }
 
-// ArgType implements Index by handing back the first non-empty match across the schemas.
+// ArgType implements Index by handing back the first non-empty match, walking the
+// schemas in priority order so overlapping members resolve deterministically: the
+// earliest schema in the build order that knows the type+field+arg wins, never
+// whatever Go's randomized map iteration happens to surface first.
 func (c Composite) ArgType(t TypeNameInput, f FieldNameInput, a ArgNameInput) ArgTypeResult {
-	for _, idx := range c.indexes {
-		if r := idx.ArgType(t, f, a); r != "" {
+	for _, s := range c.order {
+		if r := c.indexes[s].ArgType(t, f, a); r != "" {
 			return r
 		}
 	}
 	return ""
 }
 
-// HasField implements Index by reporting whether any schema has the field.
+// HasField implements Index by reporting whether any schema has the field, walking
+// the schemas in priority order for determinism (consistent with [Composite.ArgType]).
 func (c Composite) HasField(t TypeNameInput, f FieldNameInput) HasFieldResult {
-	for _, idx := range c.indexes {
-		if idx.HasField(t, f) {
+	for _, s := range c.order {
+		if c.indexes[s].HasField(t, f) {
 			return true
 		}
 	}

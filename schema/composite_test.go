@@ -118,6 +118,49 @@ func TestCompositeDetectSchema(t *testing.T) {
 	}
 }
 
+// TestCompositeOverlapDeterministic pins that ArgType and HasField resolve in
+// priority (build) order, not randomized map order, when two member schemas
+// declare the SAME type+field with DIFFERENT arg/field type strings. The earliest
+// schema in the order owns the result, every call, regardless of map iteration.
+func TestCompositeOverlapDeterministic(t *testing.T) {
+	t.Parallel()
+
+	// Both schemas declare Query.shared(x) AND type Shared.leaf, but with different
+	// type strings, so a non-deterministic lookup would flip between "String!"/"Int!"
+	// (arg) and "String"/"Int" (field) run to run.
+	const a = "type Query { shared(x: String!): Shared }\n type Shared { leaf: String }"
+	const b = "type Query { shared(x: Int!): Shared }\n type Shared { leaf: Int }"
+	sdls := map[Schema]graphql.SDL{"a": a, "b": b}
+
+	tests := []struct {
+		name     string
+		wantArg  ArgTypeResult
+		wantLeaf ArgTypeResult
+		order    []Schema
+	}{
+		{name: "a wins", order: []Schema{"a", "b"}, wantArg: "String!", wantLeaf: "String"},
+		{name: "b wins", order: []Schema{"b", "a"}, wantArg: "Int!", wantLeaf: "Int"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			want, must := assert.New(t), require.New(t)
+
+			c, err := NewComposite(tt.order, sdls)
+			must.NoError(err)
+
+			// Repeat to make a map-order regression statistically certain to trip.
+			for range 64 {
+				want.Equal(tt.wantArg, c.ArgType("Query", "shared", "x"))
+				want.Equal(tt.wantLeaf, c.ArgType("Shared", "leaf", ""))
+				want.Equal(HasFieldResult(true), c.HasField("Query", "shared"))
+				want.Equal(HasFieldResult(true), c.HasField("Shared", "leaf"))
+			}
+		})
+	}
+}
+
 func TestCompositeForSchema(t *testing.T) {
 	t.Parallel()
 

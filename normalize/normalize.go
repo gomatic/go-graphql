@@ -596,6 +596,16 @@ func extractListValues(children ast.ChildValueList) []any {
 }
 
 // extractSingleValue pulls a Go value out of an AST value.
+//
+// Replay-fidelity limitation: a nested ObjectValue or ListValue appearing inside a
+// literal list is NOT recursed into — it collapses to a fixed placeholder sentinel
+// (map[string]any{"_type": "object"} for an object, []any{"_type", "list"} for a
+// list) rather than the real nested data. List literals are lifted wholesale into a
+// single generated variable, so these inner placeholders only ever surface as the
+// shape of that variable's value, never as something the rewritten query reads back.
+// This is intentional: faithfully reconstructing arbitrarily nested literals here
+// would duplicate the object/list normalization the rest of the package already does
+// on the AST. The placeholder contract is pinned by TestExtractSingleValue.
 func extractSingleValue(v *ast.Value) any {
 	switch v.Kind {
 	case ast.IntValue:
@@ -692,14 +702,21 @@ func replaceWithVariable(path pathStr, value *ast.Value, vars VariableMap, varTy
 	value.Raw = varName
 }
 
-// parseIntValue reads an int64 out of a string.
+// parseIntValue reads an int64 out of a string. The Sscanf error is intentionally
+// discarded: raw always comes from an IntValue token that gqlparser already lexed
+// and validated, so the scan can't fail on real AST input (the branch is
+// unreachable from a parsed document). The one silent edge is an integer literal
+// beyond int64's range, which Sscanf truncates rather than erroring; GraphQL Int is
+// spec'd as 32-bit, so an in-spec value can never reach that edge.
 func parseIntValue(raw rawStr) intResult {
 	var i int64
 	_, _ = fmt.Sscanf(string(raw), "%d", &i)
 	return intResult(i)
 }
 
-// parseFloatValue reads a float64 out of a string.
+// parseFloatValue reads a float64 out of a string. As with parseIntValue, the
+// Sscanf error is discarded because raw is a gqlparser-validated FloatValue token,
+// so the failure branch is unreachable from a parsed document.
 func parseFloatValue(raw rawStr) floatResult {
 	var f float64
 	_, _ = fmt.Sscanf(string(raw), "%f", &f)
