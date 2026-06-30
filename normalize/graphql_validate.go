@@ -62,7 +62,11 @@ func queryUsesBuiltinIntrospection(doc *ast.QueryDocument) usesIntrospection {
 	return false
 }
 
-func selectionUsesBuiltinIntrospection(doc *ast.QueryDocument, set ast.SelectionSet, seen map[string]bool) usesIntrospection {
+func selectionUsesBuiltinIntrospection(
+	doc *ast.QueryDocument,
+	set ast.SelectionSet,
+	seen map[string]bool,
+) usesIntrospection {
 	for _, sel := range set {
 		if bool(selectionItemUsesIntrospection(doc, sel, seen)) {
 			return true
@@ -82,7 +86,11 @@ func selectionItemUsesIntrospection(doc *ast.QueryDocument, sel ast.Selection, s
 	return selectionUsesBuiltinIntrospection(doc, sel.(*ast.InlineFragment).SelectionSet, seen)
 }
 
-func fragmentSpreadUsesIntrospection(doc *ast.QueryDocument, spread *ast.FragmentSpread, seen map[string]bool) usesIntrospection {
+func fragmentSpreadUsesIntrospection(
+	doc *ast.QueryDocument,
+	spread *ast.FragmentSpread,
+	seen map[string]bool,
+) usesIntrospection {
 	if seen[spread.Name] {
 		return false
 	}

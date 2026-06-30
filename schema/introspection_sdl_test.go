@@ -26,17 +26,31 @@ func TestIntrospectionTypeToAstType(t *testing.T) {
 		want    string
 	}{
 		{name: "nil type", typ: nil, wantErr: ErrIntrospectionNilType},
-		{name: "named missing name", typ: &introspectedType{Kind: "SCALAR", Name: nil}, wantErr: ErrIntrospectionMissingName},
-		{name: "named empty name", typ: &introspectedType{Kind: "SCALAR", Name: namePtr("")}, wantErr: ErrIntrospectionMissingName},
+		{
+			name:    "named missing name",
+			typ:     &introspectedType{Kind: "SCALAR", Name: nil},
+			wantErr: ErrIntrospectionMissingName,
+		},
+		{
+			name:    "named empty name",
+			typ:     &introspectedType{Kind: "SCALAR", Name: namePtr("")},
+			wantErr: ErrIntrospectionMissingName,
+		},
 		{name: "named", typ: &introspectedType{Kind: "SCALAR", Name: namePtr("String")}, want: "String"},
 		{
 			name: "non null",
-			typ:  &introspectedType{Kind: introspectionKindNonNull, OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("ID")}},
+			typ: &introspectedType{
+				Kind:   introspectionKindNonNull,
+				OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("ID")},
+			},
 			want: "ID!",
 		},
 		{
 			name: "list",
-			typ:  &introspectedType{Kind: introspectionKindList, OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("String")}},
+			typ: &introspectedType{
+				Kind:   introspectionKindList,
+				OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("String")},
+			},
 			want: "[String]",
 		},
 		{
@@ -45,8 +59,11 @@ func TestIntrospectionTypeToAstType(t *testing.T) {
 			want: "Int",
 		},
 		{
-			name:    "wrapper inner error",
-			typ:     &introspectedType{Kind: introspectionKindNonNull, OfType: &introspectedType{Kind: "SCALAR", Name: nil}},
+			name: "wrapper inner error",
+			typ: &introspectedType{
+				Kind:   introspectionKindNonNull,
+				OfType: &introspectedType{Kind: "SCALAR", Name: nil},
+			},
 			wantErr: ErrIntrospectionMissingName,
 		},
 	}
@@ -119,31 +136,66 @@ func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 		{
 			name: "object field type",
 			run: func(sb *strings.Builder) error {
-				return printOneType(sb, introspectionTypeDefinition{Name: "O", Kind: ast.Object, Fields: []introspectedTypeField{nilTypeField("f")}})
+				return printOneType(
+					sb,
+					introspectionTypeDefinition{
+						Name:   "O",
+						Kind:   ast.Object,
+						Fields: []introspectedTypeField{nilTypeField("f")},
+					},
+				)
 			},
 		},
 		{
 			name: "object field arg type",
 			run: func(sb *strings.Builder) error {
-				return printOneType(sb, introspectionTypeDefinition{Name: "O", Kind: ast.Object, Fields: []introspectedTypeField{{Name: "f", Args: badArg, Type: scalarRef("Int")}}})
+				return printOneType(
+					sb,
+					introspectionTypeDefinition{
+						Name:   "O",
+						Kind:   ast.Object,
+						Fields: []introspectedTypeField{{Name: "f", Args: badArg, Type: scalarRef("Int")}},
+					},
+				)
 			},
 		},
 		{
 			name: "input field type",
 			run: func(sb *strings.Builder) error {
-				return printOneType(sb, introspectionTypeDefinition{Name: "I", Kind: ast.InputObject, InputFields: []introspectionInputField{{Name: "x", Type: nil}}})
+				return printOneType(
+					sb,
+					introspectionTypeDefinition{
+						Name:        "I",
+						Kind:        ast.InputObject,
+						InputFields: []introspectionInputField{{Name: "x", Type: nil}},
+					},
+				)
 			},
 		},
 		{
 			name: "interface field type",
 			run: func(sb *strings.Builder) error {
-				return printOneType(sb, introspectionTypeDefinition{Name: "N", Kind: ast.Interface, Fields: []introspectedTypeField{nilTypeField("f")}})
+				return printOneType(
+					sb,
+					introspectionTypeDefinition{
+						Name:   "N",
+						Kind:   ast.Interface,
+						Fields: []introspectedTypeField{nilTypeField("f")},
+					},
+				)
 			},
 		},
 		{
 			name: "interface field arg type",
 			run: func(sb *strings.Builder) error {
-				return printOneType(sb, introspectionTypeDefinition{Name: "N", Kind: ast.Interface, Fields: []introspectedTypeField{{Name: "f", Args: badArg, Type: scalarRef("Int")}}})
+				return printOneType(
+					sb,
+					introspectionTypeDefinition{
+						Name:   "N",
+						Kind:   ast.Interface,
+						Fields: []introspectedTypeField{{Name: "f", Args: badArg, Type: scalarRef("Int")}},
+					},
+				)
 			},
 		},
 		{
@@ -169,7 +221,11 @@ func TestPrintDirectivePropagatesArgTypeError(t *testing.T) {
 
 	var sb strings.Builder
 	err := printDirectives(&sb, []introspectionDirectiveDefinition{
-		{Name: "d", Args: []introspectionDirectiveArg{{Name: "a", Type: nil}}, Locations: []ast.DirectiveLocation{"FIELD"}},
+		{
+			Name:      "d",
+			Args:      []introspectionDirectiveArg{{Name: "a", Type: nil}},
+			Locations: []ast.DirectiveLocation{"FIELD"},
+		},
 	})
 	require.ErrorIs(t, err, ErrIntrospectionSDL)
 }
@@ -178,7 +234,10 @@ func TestPrintUnionMalformedPossibleTypes(t *testing.T) {
 	t.Parallel()
 
 	var sb strings.Builder
-	err := printOneType(&sb, introspectionTypeDefinition{Name: "U", Kind: ast.Union, PossibleTypes: json.RawMessage(`{bad}`)})
+	err := printOneType(
+		&sb,
+		introspectionTypeDefinition{Name: "U", Kind: ast.Union, PossibleTypes: json.RawMessage(`{bad}`)},
+	)
 	require.ErrorIs(t, err, ErrIntrospectionUnmarshal)
 }
 
@@ -186,7 +245,10 @@ func TestPrintEnumMalformedEnumValues(t *testing.T) {
 	t.Parallel()
 
 	var sb strings.Builder
-	err := printOneType(&sb, introspectionTypeDefinition{Name: "E", Kind: ast.Enum, EnumValues: json.RawMessage(`{bad}`)})
+	err := printOneType(
+		&sb,
+		introspectionTypeDefinition{Name: "E", Kind: ast.Enum, EnumValues: json.RawMessage(`{bad}`)},
+	)
 	require.ErrorIs(t, err, ErrIntrospectionUnmarshal)
 }
 

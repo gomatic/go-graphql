@@ -111,7 +111,9 @@ func nextSequentialAlias(seq aliasSequence) aliasName {
 }
 
 func fieldMergeFingerprint(f *ast.Field) fieldFingerprint {
-	return fieldFingerprint(string(argumentListFingerprint(f.Arguments)) + "|" + string(directiveListFingerprint(f.Directives)))
+	return fieldFingerprint(
+		string(argumentListFingerprint(f.Arguments)) + "|" + string(directiveListFingerprint(f.Directives)),
+	)
 }
 
 func directiveListFingerprint(ds ast.DirectiveList) directiveFingerprint {

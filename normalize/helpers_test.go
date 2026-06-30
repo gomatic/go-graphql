@@ -389,7 +389,18 @@ func TestNormalizeValueNilValueIsNoOp(t *testing.T) {
 	t.Parallel()
 
 	s := newRewriteState()
-	err := normalizeValue(nilSchemaIndex{}, "p", nil, s.vars, s.varTypes, &s.fields, &s.counter, s.canonical, "", graphQLTypesFromSchema)
+	err := normalizeValue(
+		nilSchemaIndex{},
+		"p",
+		nil,
+		s.vars,
+		s.varTypes,
+		&s.fields,
+		&s.counter,
+		s.canonical,
+		"",
+		graphQLTypesFromSchema,
+	)
 	require.NoError(t, err)
 	assert.Empty(t, s.vars)
 }
@@ -398,7 +409,16 @@ func TestNormalizeScalarValueStrictMissingTypeErrors(t *testing.T) {
 	t.Parallel()
 
 	s := newRewriteState()
-	err := normalizeScalarValue("p", &ast.Value{Kind: ast.IntValue, Raw: "1"}, s.vars, s.varTypes, &s.fields, &s.counter, "", graphQLTypesFromSchema)
+	err := normalizeScalarValue(
+		"p",
+		&ast.Value{Kind: ast.IntValue, Raw: "1"},
+		s.vars,
+		s.varTypes,
+		&s.fields,
+		&s.counter,
+		"",
+		graphQLTypesFromSchema,
+	)
 	require.ErrorIs(t, err, ErrGraphQLTypeUnresolved)
 }
 
@@ -406,7 +426,17 @@ func TestNormalizeExistingVariableStrictMissingTypeErrors(t *testing.T) {
 	t.Parallel()
 
 	s := newRewriteState()
-	err := normalizeExistingVariable("p", &ast.Value{Kind: ast.Variable, Raw: "x"}, s.vars, s.varTypes, &s.fields, &s.counter, s.canonical, "", graphQLTypesFromSchema)
+	err := normalizeExistingVariable(
+		"p",
+		&ast.Value{Kind: ast.Variable, Raw: "x"},
+		s.vars,
+		s.varTypes,
+		&s.fields,
+		&s.counter,
+		s.canonical,
+		"",
+		graphQLTypesFromSchema,
+	)
 	require.ErrorIs(t, err, ErrGraphQLTypeUnresolved)
 }
 
@@ -414,7 +444,10 @@ func TestNormalizeListLiteralsStrictMissingTypeErrors(t *testing.T) {
 	t.Parallel()
 
 	s := newRewriteState()
-	v := &ast.Value{Kind: ast.ListValue, Children: ast.ChildValueList{{Value: &ast.Value{Kind: ast.IntValue, Raw: "1"}}}}
+	v := &ast.Value{
+		Kind:     ast.ListValue,
+		Children: ast.ChildValueList{{Value: &ast.Value{Kind: ast.IntValue, Raw: "1"}}},
+	}
 	err := normalizeListLiterals("p", v, s.vars, s.varTypes, &s.fields, &s.counter, "", graphQLTypesFromSchema)
 	require.ErrorIs(t, err, ErrGraphQLTypeUnresolved)
 }

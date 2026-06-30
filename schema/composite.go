@@ -96,7 +96,15 @@ func (c Composite) DetectSchema(fields []FieldNameInput) (Schema, error) {
 			return "", err
 		}
 		if owner != first {
-			return "", ErrSchemaConflict.With(nil, "field", string(f), "expected", string(first), "found", string(owner))
+			return "", ErrSchemaConflict.With(
+				nil,
+				"field",
+				string(f),
+				"expected",
+				string(first),
+				"found",
+				string(owner),
+			)
 		}
 	}
 	return first, nil

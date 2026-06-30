@@ -43,7 +43,12 @@ func TestNewCompositeErrors(t *testing.T) {
 	}{
 		{name: "empty order", order: nil, sdls: map[Schema]graphql.SDL{}, wantErr: ErrNoSchemas},
 		{name: "missing sdl", order: []Schema{"bom"}, sdls: map[Schema]graphql.SDL{}, wantErr: ErrSchemaSDLMissing},
-		{name: "invalid sdl", order: []Schema{"bom"}, sdls: map[Schema]graphql.SDL{"bom": "type Query {{{"}, wantErr: graphql.ErrParse},
+		{
+			name:    "invalid sdl",
+			order:   []Schema{"bom"},
+			sdls:    map[Schema]graphql.SDL{"bom": "type Query {{{"},
+			wantErr: graphql.ErrParse,
+		},
 	}
 
 	for _, tt := range tests {

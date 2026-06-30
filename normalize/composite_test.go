@@ -50,11 +50,25 @@ func TestProcessCompositeResolvesOwningSchema(t *testing.T) {
 		wantSubstring string
 		wantVar1Type  string
 	}{
-		{name: "stable root field uses stable index", query: `query { stableQuery(version: 7) { data } }`, wantSchema: schemaStable, wantSubstring: "Int"},
-		{name: "list of variables uses element type", query: `query($x: String!){ tagsSearch(tags: [$x]) }`, wantSchema: schemaStable, wantVar1Type: "String!"},
+		{
+			name:          "stable root field uses stable index",
+			query:         `query { stableQuery(version: 7) { data } }`,
+			wantSchema:    schemaStable,
+			wantSubstring: "Int",
+		},
+		{
+			name:         "list of variables uses element type",
+			query:        `query($x: String!){ tagsSearch(tags: [$x]) }`,
+			wantSchema:   schemaStable,
+			wantVar1Type: "String!",
+		},
 		{name: "bom root field uses bom index", query: `query { bomResolve(id: "a") { id } }`, wantSchema: schemaBom},
 		{name: "introspection-only routes to primary", query: `query { __typename }`, wantSchema: schemaBom},
-		{name: "mutation root resolves owning schema", query: `mutation { createGitObjectStatus { id } }`, wantSchema: schemaBom},
+		{
+			name:       "mutation root resolves owning schema",
+			query:      `mutation { createGitObjectStatus { id } }`,
+			wantSchema: schemaBom,
+		},
 	}
 
 	for _, tt := range tests {
@@ -84,7 +98,11 @@ func TestProcessCompositeDetectionErrors(t *testing.T) {
 		name    string
 		query   QueryInput
 	}{
-		{name: "fields from different schemas conflict", query: `query { bomResolve(id: "a") { id } stableQuery(version: 1) { data } }`, wantErr: schema.ErrSchemaConflict},
+		{
+			name:    "fields from different schemas conflict",
+			query:   `query { bomResolve(id: "a") { id } stableQuery(version: 1) { data } }`,
+			wantErr: schema.ErrSchemaConflict,
+		},
 		{name: "unknown root field", query: `query { unknownRoot }`, wantErr: schema.ErrUnknownField},
 	}
 

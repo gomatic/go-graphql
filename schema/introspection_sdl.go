@@ -265,7 +265,15 @@ func printDirectiveArg(sb *strings.Builder, directiveName introspectionName, arg
 	printDescription(sb, arg.Description)
 	ts, err := typeStringOrError(arg.Type)
 	if err != nil {
-		return ErrIntrospectionSDL.With(err, "element", "directive_arg_type", "directive", string(directiveName), "arg", string(arg.Name))
+		return ErrIntrospectionSDL.With(
+			err,
+			"element",
+			"directive_arg_type",
+			"directive",
+			string(directiveName),
+			"arg",
+			string(arg.Name),
+		)
 	}
 	writeStringFmt(sb, "\t%s: %s\n", string(arg.Name), string(ts))
 	return nil
@@ -352,7 +360,15 @@ func printObjectField(sb *strings.Builder, parentName introspectionName, field i
 	}
 	ts, err := typeStringOrError(field.Type)
 	if err != nil {
-		return ErrIntrospectionSDL.With(err, "element", "field_type", "parent", string(parentName), "field", string(field.Name))
+		return ErrIntrospectionSDL.With(
+			err,
+			"element",
+			"field_type",
+			"parent",
+			string(parentName),
+			"field",
+			string(field.Name),
+		)
 	}
 	writeStringFmt(sb, ": %s", string(ts))
 	printDeprecation(sb, field.IsDeprecated, field.DeprecationReason)
@@ -360,7 +376,11 @@ func printObjectField(sb *strings.Builder, parentName introspectionName, field i
 	return nil
 }
 
-func printFieldArgs(sb *strings.Builder, parentName, fieldName introspectionName, args []introspectionInputField) error {
+func printFieldArgs(
+	sb *strings.Builder,
+	parentName, fieldName introspectionName,
+	args []introspectionInputField,
+) error {
 	if len(args) == 0 {
 		return nil
 	}
@@ -369,7 +389,17 @@ func printFieldArgs(sb *strings.Builder, parentName, fieldName introspectionName
 		printDescription(sb, arg.Description)
 		ts, err := typeStringOrError(arg.Type)
 		if err != nil {
-			return ErrIntrospectionSDL.With(err, "element", "arg_type", "parent", string(parentName), "field", string(fieldName), "arg", string(arg.Name))
+			return ErrIntrospectionSDL.With(
+				err,
+				"element",
+				"arg_type",
+				"parent",
+				string(parentName),
+				"field",
+				string(fieldName),
+				"arg",
+				string(arg.Name),
+			)
 		}
 		writeStringFmt(sb, "\t\t%s: %s\n", string(arg.Name), string(ts))
 	}
@@ -445,7 +475,15 @@ func printInputObjectType(sb *strings.Builder, typ introspectionTypeDefinition) 
 		printDescription(sb, field.Description)
 		ts, err := typeStringOrError(field.Type)
 		if err != nil {
-			return ErrIntrospectionSDL.With(err, "element", "input_field_type", "type", string(typ.Name), "field", string(field.Name))
+			return ErrIntrospectionSDL.With(
+				err,
+				"element",
+				"input_field_type",
+				"type",
+				string(typ.Name),
+				"field",
+				string(field.Name),
+			)
 		}
 		writeStringFmt(sb, "\t%s: %s\n", string(field.Name), string(ts))
 	}
@@ -472,13 +510,25 @@ func printInterfaceField(sb *strings.Builder, parentName introspectionName, fiel
 	}
 	ts, err := typeStringOrError(field.Type)
 	if err != nil {
-		return ErrIntrospectionSDL.With(err, "element", "interface_field_type", "parent", string(parentName), "field", string(field.Name))
+		return ErrIntrospectionSDL.With(
+			err,
+			"element",
+			"interface_field_type",
+			"parent",
+			string(parentName),
+			"field",
+			string(field.Name),
+		)
 	}
 	writeStringFmt(sb, ": %s\n", string(ts))
 	return nil
 }
 
-func printInterfaceArgs(sb *strings.Builder, parentName, fieldName introspectionName, args []introspectionInputField) error {
+func printInterfaceArgs(
+	sb *strings.Builder,
+	parentName, fieldName introspectionName,
+	args []introspectionInputField,
+) error {
 	if len(args) == 0 {
 		return nil
 	}
@@ -486,7 +536,17 @@ func printInterfaceArgs(sb *strings.Builder, parentName, fieldName introspection
 	for _, arg := range args {
 		ts, err := typeStringOrError(arg.Type)
 		if err != nil {
-			return ErrIntrospectionSDL.With(err, "element", "interface_arg_type", "parent", string(parentName), "field", string(fieldName), "arg", string(arg.Name))
+			return ErrIntrospectionSDL.With(
+				err,
+				"element",
+				"interface_arg_type",
+				"parent",
+				string(parentName),
+				"field",
+				string(fieldName),
+				"arg",
+				string(arg.Name),
+			)
 		}
 		writeStringFmt(sb, "\t\t%s: %s\n", string(arg.Name), string(ts))
 	}

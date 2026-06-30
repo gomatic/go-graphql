@@ -20,13 +20,41 @@ func TestResolveOperation(t *testing.T) {
 		wantInQuery  string
 		wantHashedOp bool
 	}{
-		{name: "single anonymous operation gets preferred name", raw: `query { bom { id } }`, preferred: "getbom", wantName: "getbom", wantInQuery: "query getbom"},
-		{name: "preferred name with hyphens is sanitized", raw: `{ bom { id } }`, preferred: "falcon-instance-summarize", wantName: "falcon_instance_summarize", wantInQuery: "query falcon_instance_summarize"},
-		{name: "empty preferred falls back to query hash", raw: `query { bom { id } }`, preferred: "", wantHashedOp: true},
+		{
+			name:        "single anonymous operation gets preferred name",
+			raw:         `query { bom { id } }`,
+			preferred:   "getbom",
+			wantName:    "getbom",
+			wantInQuery: "query getbom",
+		},
+		{
+			name:        "preferred name with hyphens is sanitized",
+			raw:         `{ bom { id } }`,
+			preferred:   "falcon-instance-summarize",
+			wantName:    "falcon_instance_summarize",
+			wantInQuery: "query falcon_instance_summarize",
+		},
+		{
+			name:         "empty preferred falls back to query hash",
+			raw:          `query { bom { id } }`,
+			preferred:    "",
+			wantHashedOp: true,
+		},
 		{name: "empty query returns error", raw: "", preferred: "x", wantErr: ErrEmptyQuery},
 		{name: "unparseable query returns parse error", raw: `query { bom (`, preferred: "x", wantErr: ErrQueryParse},
-		{name: "multi-operation document keeps matching preferred name", raw: `query A { a } query B { b }`, preferred: "B", wantName: "B", wantInQuery: "query B"},
-		{name: "multi-operation document with non-matching preferred omits name", raw: `query A { a } query B { b }`, preferred: "C", wantName: ""},
+		{
+			name:        "multi-operation document keeps matching preferred name",
+			raw:         `query A { a } query B { b }`,
+			preferred:   "B",
+			wantName:    "B",
+			wantInQuery: "query B",
+		},
+		{
+			name:      "multi-operation document with non-matching preferred omits name",
+			raw:       `query A { a } query B { b }`,
+			preferred: "C",
+			wantName:  "",
+		},
 		{name: "zero operations returns empty name", raw: `fragment F on T { id }`, preferred: "x", wantName: ""},
 	}
 

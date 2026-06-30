@@ -128,7 +128,13 @@ func prepare(idx schema.Index, raw QueryInput, schemaHint schema.Schema) (*ast.Q
 }
 
 // buildResult stitches the rewrite outputs together into a normalized Result.
-func buildResult(s schema.Schema, normalized formattedQuery, vars VariableMap, varTypes varDefs, fields []fieldPath) Result {
+func buildResult(
+	s schema.Schema,
+	normalized formattedQuery,
+	vars VariableMap,
+	varTypes varDefs,
+	fields []fieldPath,
+) Result {
 	vtm := make(VariableTypeMap, len(varTypes))
 	for name, vt := range varTypes {
 		vtm[name] = string(vt)
@@ -250,7 +256,16 @@ func clearSelectionComments(selection ast.Selection) {
 }
 
 // normalizeOperation normalizes one operation.
-func normalizeOperation(idx schema.Index, op *ast.OperationDefinition, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, aliasSeq aliasSequence) error {
+func normalizeOperation(
+	idx schema.Index,
+	op *ast.OperationDefinition,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	aliasSeq aliasSequence,
+) error {
 	parentType := idx.RootTypeNameForOperation(op.Operation)
 	op.Name = ""
 	op.VariableDefinitions = nil
@@ -302,7 +317,18 @@ func parseGraphQLType(ts varTypeStr) *ast.Type {
 }
 
 // normalizeSelectionSet normalizes a selection set and sorts it.
-func normalizeSelectionSet(idx schema.Index, parentType schema.TypeNameInput, prefix fieldPrefix, set ast.SelectionSet, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, aliasSeq aliasSequence) error {
+func normalizeSelectionSet(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	prefix fieldPrefix,
+	set ast.SelectionSet,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	aliasSeq aliasSequence,
+) error {
 	sortFieldSelections(set)
 	for _, sel := range set {
 		if err := normalizeSelection(idx, parentType, prefix, sel, vars, varTypes, fields, counter, canonicalNames, aliasSeq); err != nil {
@@ -328,7 +354,18 @@ func sortFieldSelections(set ast.SelectionSet) {
 }
 
 // normalizeSelection normalizes one selection item.
-func normalizeSelection(idx schema.Index, parentType schema.TypeNameInput, prefix fieldPrefix, sel ast.Selection, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, aliasSeq aliasSequence) error {
+func normalizeSelection(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	prefix fieldPrefix,
+	sel ast.Selection,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	aliasSeq aliasSequence,
+) error {
 	switch s := sel.(type) {
 	case *ast.Field:
 		return normalizeField(idx, parentType, prefix, s, vars, varTypes, fields, counter, canonicalNames, aliasSeq)
@@ -344,7 +381,18 @@ func normalizeSelection(idx schema.Index, parentType schema.TypeNameInput, prefi
 }
 
 // normalizeField normalizes a field, its arguments, and whatever's nested under it.
-func normalizeField(idx schema.Index, parentType schema.TypeNameInput, prefix fieldPrefix, field *ast.Field, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, aliasSeq aliasSequence) error {
+func normalizeField(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	prefix fieldPrefix,
+	field *ast.Field,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	aliasSeq aliasSequence,
+) error {
 	path := buildFieldPath(prefix, fieldNameInput(field.Name))
 	field.Directives = nil
 	field.Comment = nil
@@ -355,7 +403,18 @@ func normalizeField(idx schema.Index, parentType schema.TypeNameInput, prefix fi
 		return err
 	}
 	if len(field.SelectionSet) > 0 {
-		return normalizeFieldSelections(idx, parentType, path, field, vars, varTypes, fields, counter, canonicalNames, aliasSeq)
+		return normalizeFieldSelections(
+			idx,
+			parentType,
+			path,
+			field,
+			vars,
+			varTypes,
+			fields,
+			counter,
+			canonicalNames,
+			aliasSeq,
+		)
 	}
 	*fields = append(*fields, fieldPath(path))
 	return nil
@@ -363,10 +422,32 @@ func normalizeField(idx schema.Index, parentType schema.TypeNameInput, prefix fi
 
 // normalizeFieldSelections normalizes a field's nested selection set against that
 // field's return type, with the wrappers peeled off.
-func normalizeFieldSelections(idx schema.Index, parentType schema.TypeNameInput, path pathStr, field *ast.Field, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, aliasSeq aliasSequence) error {
+func normalizeFieldSelections(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	path pathStr,
+	field *ast.Field,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	aliasSeq aliasSequence,
+) error {
 	returnType := idx.ArgType(parentType, schema.FieldNameInput(field.Name), "")
 	childType := namedTypeForSelectionSetParent(returnType)
-	return normalizeSelectionSet(idx, childType, fieldPrefix(path), field.SelectionSet, vars, varTypes, fields, counter, canonicalNames, aliasSeq)
+	return normalizeSelectionSet(
+		idx,
+		childType,
+		fieldPrefix(path),
+		field.SelectionSet,
+		vars,
+		varTypes,
+		fields,
+		counter,
+		canonicalNames,
+		aliasSeq,
+	)
 }
 
 // buildFieldPath builds up a dot-separated field path.
@@ -378,7 +459,19 @@ func buildFieldPath(prefix fieldPrefix, name fieldNameInput) pathStr {
 }
 
 // normalizeArguments sorts and normalizes a field's arguments, leaning on the schema to infer types.
-func normalizeArguments(idx schema.Index, parentType schema.TypeNameInput, fieldName schema.FieldNameInput, path pathStr, args ast.ArgumentList, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, inferMissing inferMissingGraphQLTypes) error {
+func normalizeArguments(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	fieldName schema.FieldNameInput,
+	path pathStr,
+	args ast.ArgumentList,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	sort.Slice(args, func(i, j int) bool {
 		return args[i].Name < args[j].Name
 	})
@@ -391,29 +484,103 @@ func normalizeArguments(idx schema.Index, parentType schema.TypeNameInput, field
 }
 
 // normalizeArgument normalizes one argument's value.
-func normalizeArgument(idx schema.Index, parentType schema.TypeNameInput, fieldName schema.FieldNameInput, path pathStr, arg *ast.Argument, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, inferMissing inferMissingGraphQLTypes) error {
+func normalizeArgument(
+	idx schema.Index,
+	parentType schema.TypeNameInput,
+	fieldName schema.FieldNameInput,
+	path pathStr,
+	arg *ast.Argument,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	argPath := pathStr(string(path) + "." + arg.Name)
 	argType := schemaType(idx.ArgType(parentType, fieldName, schema.ArgNameInput(arg.Name)))
 	if argType == "" && inferMissing == graphQLTypesFromSchema {
-		return ErrGraphQLTypeUnresolved.With(nil, keyParentType, string(parentType), keyField, string(fieldName), keyArgument, arg.Name)
+		return ErrGraphQLTypeUnresolved.With(
+			nil,
+			keyParentType,
+			string(parentType),
+			keyField,
+			string(fieldName),
+			keyArgument,
+			arg.Name,
+		)
 	}
-	return normalizeValue(idx, argPath, arg.Value, vars, varTypes, fields, counter, canonicalNames, argType, inferMissing)
+	return normalizeValue(
+		idx,
+		argPath,
+		arg.Value,
+		vars,
+		varTypes,
+		fields,
+		counter,
+		canonicalNames,
+		argType,
+		inferMissing,
+	)
 }
 
 // normalizeValue normalizes a value, turning literals into variables. When
 // inferMissing is graphQLTypesFromSchema, every value position has to come with a
 // schema type — that's the strict path.
-func normalizeValue(idx schema.Index, path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeValue(
+	idx schema.Index,
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	if value == nil {
 		return nil
 	}
 	switch value.Kind {
 	case ast.Variable:
-		return normalizeExistingVariable(path, value, vars, varTypes, fields, counter, canonicalNames, sType, inferMissing)
+		return normalizeExistingVariable(
+			path,
+			value,
+			vars,
+			varTypes,
+			fields,
+			counter,
+			canonicalNames,
+			sType,
+			inferMissing,
+		)
 	case ast.ListValue:
-		return normalizeListValue(idx, path, value, vars, varTypes, fields, counter, canonicalNames, sType, inferMissing)
+		return normalizeListValue(
+			idx,
+			path,
+			value,
+			vars,
+			varTypes,
+			fields,
+			counter,
+			canonicalNames,
+			sType,
+			inferMissing,
+		)
 	case ast.ObjectValue:
-		return normalizeObjectValue(idx, path, value, vars, varTypes, fields, counter, canonicalNames, sType, inferMissing)
+		return normalizeObjectValue(
+			idx,
+			path,
+			value,
+			vars,
+			varTypes,
+			fields,
+			counter,
+			canonicalNames,
+			sType,
+			inferMissing,
+		)
 	case ast.NullValue:
 		*fields = append(*fields, fieldPath(path))
 		return nil
@@ -424,7 +591,16 @@ func normalizeValue(idx schema.Index, path pathStr, value *ast.Value, vars Varia
 
 // normalizeScalarValue swaps a scalar literal (Int, Float, Boolean, String,
 // Block, Enum) for a generated variable.
-func normalizeScalarValue(path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeScalarValue(
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	inferred, goValue := scalarInferredTypeAndValue(value)
 	varType, err := schemaOrInferVariableType(sType, inferred, inferMissing, path)
 	if err != nil {
@@ -450,7 +626,12 @@ func scalarInferredTypeAndValue(value *ast.Value) (variableType, any) {
 }
 
 // schemaOrInferVariableType insists on a schema type unless inferMissing says we can infer one.
-func schemaOrInferVariableType(sType schemaType, inferred variableType, inferMissing inferMissingGraphQLTypes, path pathStr) (variableType, error) {
+func schemaOrInferVariableType(
+	sType schemaType,
+	inferred variableType,
+	inferMissing inferMissingGraphQLTypes,
+	path pathStr,
+) (variableType, error) {
 	if sType != "" {
 		return variableType(sType), nil
 	}
@@ -504,7 +685,17 @@ func listElementSchemaType(sType schemaType) schemaType {
 }
 
 // normalizeExistingVariable gives an already-present variable reference its canonical name.
-func normalizeExistingVariable(path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeExistingVariable(
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	canonical, exists := canonicalNames[value.Raw]
 	if !exists {
 		varType, err := schemaOrInferVariableType(sType, gqlStringNonNull, inferMissing, path)
@@ -541,11 +732,33 @@ func zeroValueForType(sType schemaType) any {
 }
 
 // normalizeListValue normalizes a list value.
-func normalizeListValue(idx schema.Index, path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeListValue(
+	idx schema.Index,
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	if listHasLiterals(value.Children) {
 		return normalizeListLiterals(path, value, vars, varTypes, fields, counter, sType, inferMissing)
 	}
-	return normalizeListVariablesOnly(idx, path, value, vars, varTypes, fields, counter, canonicalNames, sType, inferMissing)
+	return normalizeListVariablesOnly(
+		idx,
+		path,
+		value,
+		vars,
+		varTypes,
+		fields,
+		counter,
+		canonicalNames,
+		sType,
+		inferMissing,
+	)
 }
 
 // listHasLiterals reports whether any child of the list is a non-variable literal.
@@ -561,7 +774,18 @@ func listHasLiterals(children ast.ChildValueList) bool {
 // normalizeListVariablesOnly normalizes a list whose elements are all variables.
 // Each element gets the list's element type; if that type can't be resolved in
 // strict mode, normalizing the element bubbles up ErrGraphQLTypeUnresolved.
-func normalizeListVariablesOnly(idx schema.Index, path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeListVariablesOnly(
+	idx schema.Index,
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	elemType := listElementSchemaType(sType)
 	for _, child := range value.Children {
 		if err := normalizeValue(idx, path, child.Value, vars, varTypes, fields, counter, canonicalNames, elemType, inferMissing); err != nil {
@@ -572,7 +796,16 @@ func normalizeListVariablesOnly(idx schema.Index, path pathStr, value *ast.Value
 }
 
 // normalizeListLiterals swaps a list that contains literals for a single variable.
-func normalizeListLiterals(path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, sType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeListLiterals(
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	sType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	listValues := extractListValues(value.Children)
 	varType, err := schemaOrInferVariableType(sType, inferListType(listValues), inferMissing, path)
 	if err != nil {
@@ -627,7 +860,18 @@ func extractSingleValue(v *ast.Value) any {
 
 // normalizeObjectValue normalizes an object value's children, using the
 // INPUT_OBJECT field types from the schema index.
-func normalizeObjectValue(idx schema.Index, path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, parentSType schemaType, inferMissing inferMissingGraphQLTypes) error {
+func normalizeObjectValue(
+	idx schema.Index,
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	parentSType schemaType,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	base := unwrapToNamedInputType(parentSType)
 	effectiveInfer := inferObjectFieldInferenceMode(namedTypeName(base), inferMissing)
 	sort.Slice(value.Children, func(i, j int) bool {
@@ -642,13 +886,43 @@ func normalizeObjectValue(idx schema.Index, path pathStr, value *ast.Value, vars
 }
 
 // normalizeObjectChild normalizes a single field of an input-object literal.
-func normalizeObjectChild(idx schema.Index, path pathStr, base schemaType, child *ast.ChildValue, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, canonicalNames varMap, inferMissing inferMissingGraphQLTypes) error {
+func normalizeObjectChild(
+	idx schema.Index,
+	path pathStr,
+	base schemaType,
+	child *ast.ChildValue,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	canonicalNames varMap,
+	inferMissing inferMissingGraphQLTypes,
+) error {
 	childPath := pathStr(string(path) + "." + child.Name)
 	childType := objectChildSchemaType(idx, base, child.Name)
 	if childType == "" && inferMissing == graphQLTypesFromSchema {
-		return ErrGraphQLTypeUnresolved.With(nil, keyPath, string(childPath), keyInputType, string(base), keyField, child.Name)
+		return ErrGraphQLTypeUnresolved.With(
+			nil,
+			keyPath,
+			string(childPath),
+			keyInputType,
+			string(base),
+			keyField,
+			child.Name,
+		)
 	}
-	return normalizeValue(idx, childPath, child.Value, vars, varTypes, fields, counter, canonicalNames, childType, inferMissing)
+	return normalizeValue(
+		idx,
+		childPath,
+		child.Value,
+		vars,
+		varTypes,
+		fields,
+		counter,
+		canonicalNames,
+		childType,
+		inferMissing,
+	)
 }
 
 // objectChildSchemaType resolves the schema type of an input-object field, and
@@ -679,7 +953,10 @@ func isOpaqueJSONLikeScalarType(namedUnwrapped namedTypeName) isJSONLike {
 // inferObjectFieldInferenceMode returns graphQLTypesInferredOK for subtrees living
 // under opaque JSON scalars, so nested filter shapes normalize without needing the
 // schema to resolve their fields.
-func inferObjectFieldInferenceMode(parentNamedType namedTypeName, inferMissing inferMissingGraphQLTypes) inferMissingGraphQLTypes {
+func inferObjectFieldInferenceMode(
+	parentNamedType namedTypeName,
+	inferMissing inferMissingGraphQLTypes,
+) inferMissingGraphQLTypes {
 	if bool(isOpaqueJSONLikeScalarType(parentNamedType)) {
 		return graphQLTypesInferredOK
 	}
@@ -693,7 +970,16 @@ func nextVariableName(counter *varCounter) string {
 }
 
 // replaceWithVariable swaps a literal value for a variable reference.
-func replaceWithVariable(path pathStr, value *ast.Value, vars VariableMap, varTypes varDefs, fields *[]fieldPath, counter *varCounter, goValue any, varType variableType) {
+func replaceWithVariable(
+	path pathStr,
+	value *ast.Value,
+	vars VariableMap,
+	varTypes varDefs,
+	fields *[]fieldPath,
+	counter *varCounter,
+	goValue any,
+	varType variableType,
+) {
 	varName := nextVariableName(counter)
 	vars[varName] = goValue
 	varTypes[varName] = varType

@@ -72,9 +72,17 @@ func TestIntrospectionToSDLErrors(t *testing.T) {
 	}{
 		{name: "invalid json", data: "{invalid}", wantErr: ErrIntrospectionParse},
 		{name: "types not an array", data: `{"data":{"schema":{"types":"oops"}}}`, wantErr: ErrIntrospectionParse},
-		{name: "graphql errors", data: `{"errors":[{"message":"boom"}],"data":{"schema":{"types":[]}}}`, wantErr: ErrIntrospectionGraphQLErrors},
+		{
+			name:    "graphql errors",
+			data:    `{"errors":[{"message":"boom"}],"data":{"schema":{"types":[]}}}`,
+			wantErr: ErrIntrospectionGraphQLErrors,
+		},
 		{name: "no types", data: `{}`, wantErr: ErrIntrospectionEmpty},
-		{name: "union empty propagates", data: `{"data":{"schema":{"types":[{"kind":"UNION","name":"U","possible_types":null}]}}}`, wantErr: ErrIntrospectionUnionEmpty},
+		{
+			name:    "union empty propagates",
+			data:    `{"data":{"schema":{"types":[{"kind":"UNION","name":"U","possible_types":null}]}}}`,
+			wantErr: ErrIntrospectionUnionEmpty,
+		},
 		{
 			name:    "directive arg error propagates",
 			data:    `{"data":{"schema":{"directives":[{"name":"bad","locations":["FIELD"],"args":[{"name":"a"}]}],"types":[{"kind":"OBJECT","name":"Query","fields":[{"name":"x","args":[],"type":{"kind":"SCALAR","name":"Boolean"}}]}]}}}`,
@@ -205,8 +213,16 @@ func TestUnifyIntrospectionEnvelope(t *testing.T) {
 		wantHasSchema bool
 	}{
 		{name: "no data key", raw: map[string]any{"x": 1}, wantHasSchema: false},
-		{name: "schema already present", raw: map[string]any{"data": map[string]any{"schema": map[string]any{}}}, wantHasSchema: true},
-		{name: "promote __schema", raw: map[string]any{"data": map[string]any{"__schema": map[string]any{"types": []any{}}}}, wantHasSchema: true},
+		{
+			name:          "schema already present",
+			raw:           map[string]any{"data": map[string]any{"schema": map[string]any{}}},
+			wantHasSchema: true,
+		},
+		{
+			name:          "promote __schema",
+			raw:           map[string]any{"data": map[string]any{"__schema": map[string]any{"types": []any{}}}},
+			wantHasSchema: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -234,7 +250,10 @@ func TestCanonicalizeIntrospectionResponseEarlyReturns(t *testing.T) {
 		{name: "no data", raw: map[string]any{}},
 		{name: "no schema object", raw: map[string]any{"data": map[string]any{}}},
 		{name: "types not array", raw: map[string]any{"data": map[string]any{"schema": map[string]any{"types": "x"}}}},
-		{name: "type element not map", raw: map[string]any{"data": map[string]any{"schema": map[string]any{"types": []any{"x"}}}}},
+		{
+			name: "type element not map",
+			raw:  map[string]any{"data": map[string]any{"schema": map[string]any{"types": []any{"x"}}}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -259,9 +278,15 @@ func TestCanonicalizeReadsEitherSchemaKey(t *testing.T) {
 						"queryType": map[string]any{"name": "Query"},
 						"types": []any{
 							map[string]any{
-								"kind":   "OBJECT",
-								"name":   "Query",
-								"fields": []any{map[string]any{"name": "x", "args": []any{}, "type": map[string]any{"kind": "SCALAR", "name": "Boolean"}}},
+								"kind": "OBJECT",
+								"name": "Query",
+								"fields": []any{
+									map[string]any{
+										"name": "x",
+										"args": []any{},
+										"type": map[string]any{"kind": "SCALAR", "name": "Boolean"},
+									},
+								},
 							},
 							map[string]any{
 								"kind":          "ENUM",
@@ -300,7 +325,10 @@ func TestCanonicalizeFieldsAndInputValuesSkipNonMaps(t *testing.T) {
 			"not-a-map",
 			map[string]any{"name": "f", "type": map[string]any{"ofType": map[string]any{"name": "X"}}},
 		},
-		"input_fields": []any{"not-a-map", map[string]any{"name": "i", "type": map[string]any{"kind": "SCALAR", "name": "Y"}}},
+		"input_fields": []any{
+			"not-a-map",
+			map[string]any{"name": "i", "type": map[string]any{"kind": "SCALAR", "name": "Y"}},
+		},
 	}
 	canonicalizeIntrospectionTypeMap(typeObj)
 

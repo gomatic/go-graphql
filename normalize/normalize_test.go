@@ -89,12 +89,48 @@ func TestProcessExtractsScalarVariables(t *testing.T) {
 		wantVarName  string
 		wantHasVars  bool
 	}{
-		{name: "string id", query: `{ bomResolve(id: "abc123") { name } }`, wantHasVars: true, wantVarName: "var1", wantVarValue: "abc123"},
-		{name: "int version", query: `{ bomResolve(id: "x", version: 42) { name } }`, wantHasVars: true, wantVarName: "var2", wantVarValue: int64(42)},
-		{name: "float score", query: `{ bomSearch(score: 3.14) { id } }`, wantHasVars: true, wantVarName: "var1", wantVarValue: 3.14},
-		{name: "bool active", query: `{ bomList(active: true, status: ACTIVE) { items } }`, wantHasVars: true, wantVarName: "var1", wantVarValue: true},
-		{name: "enum status", query: `{ bomList(active: false, status: ACTIVE) { items } }`, wantHasVars: true, wantVarName: "var2", wantVarValue: "ACTIVE"},
-		{name: "no args no vars", query: `{ bomResolve(id: "x") { name } }`, wantHasVars: true, wantVarName: "var1", wantVarValue: "x"},
+		{
+			name:         "string id",
+			query:        `{ bomResolve(id: "abc123") { name } }`,
+			wantHasVars:  true,
+			wantVarName:  "var1",
+			wantVarValue: "abc123",
+		},
+		{
+			name:         "int version",
+			query:        `{ bomResolve(id: "x", version: 42) { name } }`,
+			wantHasVars:  true,
+			wantVarName:  "var2",
+			wantVarValue: int64(42),
+		},
+		{
+			name:         "float score",
+			query:        `{ bomSearch(score: 3.14) { id } }`,
+			wantHasVars:  true,
+			wantVarName:  "var1",
+			wantVarValue: 3.14,
+		},
+		{
+			name:         "bool active",
+			query:        `{ bomList(active: true, status: ACTIVE) { items } }`,
+			wantHasVars:  true,
+			wantVarName:  "var1",
+			wantVarValue: true,
+		},
+		{
+			name:         "enum status",
+			query:        `{ bomList(active: false, status: ACTIVE) { items } }`,
+			wantHasVars:  true,
+			wantVarName:  "var2",
+			wantVarValue: "ACTIVE",
+		},
+		{
+			name:         "no args no vars",
+			query:        `{ bomResolve(id: "x") { name } }`,
+			wantHasVars:  true,
+			wantVarName:  "var1",
+			wantVarValue: "x",
+		},
 	}
 
 	for _, tt := range tests {
@@ -158,8 +194,16 @@ type BomResult { id: ID }`)
 		name         string
 		query        QueryInput
 	}{
-		{name: "list of strings", query: `{ bomResolve(ids: ["a", "b", "c"]) { id } }`, wantVarValue: []any{"a", "b", "c"}},
-		{name: "list of ints", query: `{ bomResolve(versions: [1, 2, 3]) { id } }`, wantVarValue: []any{int64(1), int64(2), int64(3)}},
+		{
+			name:         "list of strings",
+			query:        `{ bomResolve(ids: ["a", "b", "c"]) { id } }`,
+			wantVarValue: []any{"a", "b", "c"},
+		},
+		{
+			name:         "list of ints",
+			query:        `{ bomResolve(versions: [1, 2, 3]) { id } }`,
+			wantVarValue: []any{int64(1), int64(2), int64(3)},
+		},
 	}
 
 	for _, tt := range tests {
@@ -193,8 +237,16 @@ func TestProcessObjectValues(t *testing.T) {
 		query       QueryInput
 		wantVarKeys []string
 	}{
-		{name: "object with one field", query: `{ bomCreate(input: {name: "test"}) { id } }`, wantVarKeys: []string{"var1"}},
-		{name: "object with two fields", query: `{ bomCreate(input: {name: "test", version: 1}) { id } }`, wantVarKeys: []string{"var1", "var2"}},
+		{
+			name:        "object with one field",
+			query:       `{ bomCreate(input: {name: "test"}) { id } }`,
+			wantVarKeys: []string{"var1"},
+		},
+		{
+			name:        "object with two fields",
+			query:       `{ bomCreate(input: {name: "test", version: 1}) { id } }`,
+			wantVarKeys: []string{"var1", "var2"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -465,8 +517,16 @@ func TestFormat(t *testing.T) {
 	}{
 		{name: "empty", raw: "", wantErr: ErrEmptyQuery},
 		{name: "invalid", raw: "{ broken", wantErr: ErrQueryParse},
-		{name: "collapses whitespace and strips comments", raw: "{\n  # a comment\n  bom {\n    id\n  }\n}", wantContain: "bom"},
-		{name: "strips comments across inline fragment and spread", raw: "{\n  a {\n    # c1\n    ... on T {\n      # c2\n      id\n    }\n    ...F\n  }\n}\nfragment F on T { name }", wantContain: "a"},
+		{
+			name:        "collapses whitespace and strips comments",
+			raw:         "{\n  # a comment\n  bom {\n    id\n  }\n}",
+			wantContain: "bom",
+		},
+		{
+			name:        "strips comments across inline fragment and spread",
+			raw:         "{\n  a {\n    # c1\n    ... on T {\n      # c2\n      id\n    }\n    ...F\n  }\n}\nfragment F on T { name }",
+			wantContain: "a",
+		},
 	}
 
 	for _, tt := range tests {

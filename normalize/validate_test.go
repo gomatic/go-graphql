@@ -47,7 +47,11 @@ func TestQueryUsesBuiltinIntrospectionDetection(t *testing.T) {
 		{name: "nested field", query: `query { wrapper { __typename } }`, want: true},
 		{name: "inside inline fragment", query: `query { a { ... on T { __typename } } }`, want: true},
 		{name: "inside fragment spread", query: `query { a { ...F } } fragment F on R { __typename }`, want: true},
-		{name: "unused fragment with introspection", query: `query { a { id } } fragment F on R { __typename }`, want: true},
+		{
+			name:  "unused fragment with introspection",
+			query: `query { a { id } } fragment F on R { __typename }`,
+			want:  true,
+		},
 		{name: "missing fragment spread", query: `query { a { ...Missing } }`, want: false},
 		{name: "no introspection", query: `query { a { id } }`, want: false},
 	}
