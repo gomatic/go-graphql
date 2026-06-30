@@ -12,6 +12,24 @@ GraphQL schema parsing, composition, introspection, and operation normalization 
 
 The library is pure parse/compose/normalize over in-memory SDL and JSON: it hard-codes no schema names and no cache paths. Callers own persistence and supply their own schema set.
 
+## Usage
+
+Build an [`Index`](schema/) from SDL, then normalize an operation against it. Normalization lifts inline literals into generated variables, sorts and minimizes the document, strips comments and client aliases, and validates the result against the schema:
+
+```go
+idx, err := schema.NewIndex("api", graphql.SDL("type Query { user(id: ID!): User } type User { id: ID name: String }"))
+// handle err
+
+res, err := normalize.Process(idx, `{ user(id: "u-123") { name } }`)
+// handle err
+
+res.Query()         // query ($var1: ID!){ user(id:$var1){ name }}
+res.Variables()     // map[string]any{"var1": "u-123"}
+res.VariableTypes() // map[string]string{"var1": "ID!"}
+```
+
+For a multi-schema deployment, [`schema.NewComposite`](schema/) routes each operation to the schema that owns its root fields; for an endpoint you can only introspect, [`schema.IndexFromIntrospection`](schema/) builds the same `Index` from an introspection JSON response.
+
 ## Errors
 
 Every error a package can emit is a [`errs.Const`](https://github.com/gomatic/go-error) sentinel — match with `errors.Is`, never by string:

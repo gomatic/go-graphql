@@ -299,6 +299,9 @@ func skipType(typ introspectionTypeDefinition) bool {
 }
 
 func printType(sb *strings.Builder, typ introspectionTypeDefinition) error {
+	if typ.Name == "" {
+		return ErrIntrospectionMissingName.With(nil, "kind", string(typ.Kind))
+	}
 	printDescription(sb, typ.Description)
 	if err := printOneType(sb, typ); err != nil {
 		return err

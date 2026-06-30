@@ -79,6 +79,11 @@ func TestIntrospectionToSDLErrors(t *testing.T) {
 		},
 		{name: "no types", data: `{}`, wantErr: ErrIntrospectionEmpty},
 		{
+			name:    "type definition missing name",
+			data:    `{"data":{"schema":{"types":[{"kind":"OBJECT"}]}}}`,
+			wantErr: ErrIntrospectionMissingName,
+		},
+		{
 			name:    "union empty propagates",
 			data:    `{"data":{"schema":{"types":[{"kind":"UNION","name":"U","possible_types":null}]}}}`,
 			wantErr: ErrIntrospectionUnionEmpty,
