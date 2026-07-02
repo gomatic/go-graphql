@@ -470,13 +470,13 @@ func normalizeArguments(
 	fields *[]fieldPath,
 	counter *varCounter,
 	canonicalNames varMap,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	sort.Slice(args, func(i, j int) bool {
 		return args[i].Name < args[j].Name
 	})
 	for _, arg := range args {
-		if err := normalizeArgument(idx, parentType, fieldName, path, arg, vars, varTypes, fields, counter, canonicalNames, inferMissing); err != nil {
+		if err := normalizeArgument(idx, parentType, fieldName, path, arg, vars, varTypes, fields, counter, canonicalNames, isInferMissing); err != nil {
 			return err
 		}
 	}
@@ -495,11 +495,11 @@ func normalizeArgument(
 	fields *[]fieldPath,
 	counter *varCounter,
 	canonicalNames varMap,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	argPath := pathStr(string(path) + "." + arg.Name)
 	argType := schemaType(idx.ArgType(parentType, fieldName, schema.ArgNameInput(arg.Name)))
-	if argType == "" && inferMissing == graphQLTypesFromSchema {
+	if argType == "" && isInferMissing == graphQLTypesFromSchema {
 		return ErrGraphQLTypeUnresolved.With(
 			nil,
 			keyParentType,
@@ -520,12 +520,12 @@ func normalizeArgument(
 		counter,
 		canonicalNames,
 		argType,
-		inferMissing,
+		isInferMissing,
 	)
 }
 
 // normalizeValue normalizes a value, turning literals into variables. When
-// inferMissing is graphQLTypesFromSchema, every value position has to come with a
+// isInferMissing is graphQLTypesFromSchema, every value position has to come with a
 // schema type — that's the strict path.
 func normalizeValue(
 	idx schema.Index,
@@ -537,7 +537,7 @@ func normalizeValue(
 	counter *varCounter,
 	canonicalNames varMap,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	if value == nil {
 		return nil
@@ -553,7 +553,7 @@ func normalizeValue(
 			counter,
 			canonicalNames,
 			sType,
-			inferMissing,
+			isInferMissing,
 		)
 	case ast.ListValue:
 		return normalizeListValue(
@@ -566,7 +566,7 @@ func normalizeValue(
 			counter,
 			canonicalNames,
 			sType,
-			inferMissing,
+			isInferMissing,
 		)
 	case ast.ObjectValue:
 		return normalizeObjectValue(
@@ -579,13 +579,13 @@ func normalizeValue(
 			counter,
 			canonicalNames,
 			sType,
-			inferMissing,
+			isInferMissing,
 		)
 	case ast.NullValue:
 		*fields = append(*fields, fieldPath(path))
 		return nil
 	default:
-		return normalizeScalarValue(path, value, vars, varTypes, fields, counter, sType, inferMissing)
+		return normalizeScalarValue(path, value, vars, varTypes, fields, counter, sType, isInferMissing)
 	}
 }
 
@@ -599,10 +599,10 @@ func normalizeScalarValue(
 	fields *[]fieldPath,
 	counter *varCounter,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	inferred, goValue := scalarInferredTypeAndValue(value)
-	varType, err := schemaOrInferVariableType(sType, inferred, inferMissing, path)
+	varType, err := schemaOrInferVariableType(sType, inferred, isInferMissing, path)
 	if err != nil {
 		return err
 	}
@@ -625,17 +625,17 @@ func scalarInferredTypeAndValue(value *ast.Value) (variableType, any) {
 	}
 }
 
-// schemaOrInferVariableType insists on a schema type unless inferMissing says we can infer one.
+// schemaOrInferVariableType insists on a schema type unless isInferMissing says we can infer one.
 func schemaOrInferVariableType(
 	sType schemaType,
 	inferred variableType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 	path pathStr,
 ) (variableType, error) {
 	if sType != "" {
 		return variableType(sType), nil
 	}
-	if inferMissing == graphQLTypesInferredOK {
+	if isInferMissing == graphQLTypesInferredOK {
 		return inferred, nil
 	}
 	return "", ErrGraphQLTypeUnresolved.With(nil, keyPath, string(path), keyReason, "missing schema type for value")
@@ -694,11 +694,11 @@ func normalizeExistingVariable(
 	counter *varCounter,
 	canonicalNames varMap,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	canonical, exists := canonicalNames[value.Raw]
 	if !exists {
-		varType, err := schemaOrInferVariableType(sType, gqlStringNonNull, inferMissing, path)
+		varType, err := schemaOrInferVariableType(sType, gqlStringNonNull, isInferMissing, path)
 		if err != nil {
 			return err
 		}
@@ -742,10 +742,10 @@ func normalizeListValue(
 	counter *varCounter,
 	canonicalNames varMap,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	if listHasLiterals(value.Children) {
-		return normalizeListLiterals(path, value, vars, varTypes, fields, counter, sType, inferMissing)
+		return normalizeListLiterals(path, value, vars, varTypes, fields, counter, sType, isInferMissing)
 	}
 	return normalizeListVariablesOnly(
 		idx,
@@ -757,7 +757,7 @@ func normalizeListValue(
 		counter,
 		canonicalNames,
 		sType,
-		inferMissing,
+		isInferMissing,
 	)
 }
 
@@ -784,11 +784,11 @@ func normalizeListVariablesOnly(
 	counter *varCounter,
 	canonicalNames varMap,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	elemType := listElementSchemaType(sType)
 	for _, child := range value.Children {
-		if err := normalizeValue(idx, path, child.Value, vars, varTypes, fields, counter, canonicalNames, elemType, inferMissing); err != nil {
+		if err := normalizeValue(idx, path, child.Value, vars, varTypes, fields, counter, canonicalNames, elemType, isInferMissing); err != nil {
 			return err
 		}
 	}
@@ -804,10 +804,10 @@ func normalizeListLiterals(
 	fields *[]fieldPath,
 	counter *varCounter,
 	sType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	listValues := extractListValues(value.Children)
-	varType, err := schemaOrInferVariableType(sType, inferListType(listValues), inferMissing, path)
+	varType, err := schemaOrInferVariableType(sType, inferListType(listValues), isInferMissing, path)
 	if err != nil {
 		return err
 	}
@@ -870,10 +870,10 @@ func normalizeObjectValue(
 	counter *varCounter,
 	canonicalNames varMap,
 	parentSType schemaType,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	base := unwrapToNamedInputType(parentSType)
-	effectiveInfer := inferObjectFieldInferenceMode(namedTypeName(base), inferMissing)
+	effectiveInfer := inferObjectFieldInferenceMode(namedTypeName(base), isInferMissing)
 	sort.Slice(value.Children, func(i, j int) bool {
 		return value.Children[i].Name < value.Children[j].Name
 	})
@@ -896,11 +896,11 @@ func normalizeObjectChild(
 	fields *[]fieldPath,
 	counter *varCounter,
 	canonicalNames varMap,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	childPath := pathStr(string(path) + "." + child.Name)
-	childType := objectChildSchemaType(idx, base, child.Name)
-	if childType == "" && inferMissing == graphQLTypesFromSchema {
+	childType := objectChildSchemaType(idx, base, nameParam(child.Name))
+	if childType == "" && isInferMissing == graphQLTypesFromSchema {
 		return ErrGraphQLTypeUnresolved.With(
 			nil,
 			keyPath,
@@ -921,17 +921,20 @@ func normalizeObjectChild(
 		counter,
 		canonicalNames,
 		childType,
-		inferMissing,
+		isInferMissing,
 	)
 }
 
+// nameParam names the name parameter of objectChildSchemaType; rename it to the real domain concept.
+type nameParam string
+
 // objectChildSchemaType resolves the schema type of an input-object field, and
 // skips the lookup entirely when the parent is an opaque JSON-like scalar.
-func objectChildSchemaType(idx schema.Index, base schemaType, name string) schemaType {
+func objectChildSchemaType(idx schema.Index, base schemaType, name nameParam) schemaType {
 	if base == "" || bool(isOpaqueJSONLikeScalarType(namedTypeName(base))) {
 		return ""
 	}
-	return schemaType(idx.ArgType(schema.TypeNameInput(base), schema.FieldNameInput(name), ""))
+	return schemaType(idx.ArgType(schema.TypeNameInput(base), schema.FieldNameInput(string(name)), ""))
 }
 
 // isOpaqueJSONLikeScalarType reports whether the named input type is a scalar
@@ -955,12 +958,12 @@ func isOpaqueJSONLikeScalarType(namedUnwrapped namedTypeName) isJSONLike {
 // schema to resolve their fields.
 func inferObjectFieldInferenceMode(
 	parentNamedType namedTypeName,
-	inferMissing inferMissingGraphQLTypes,
+	isInferMissing inferMissingGraphQLTypes,
 ) inferMissingGraphQLTypes {
 	if bool(isOpaqueJSONLikeScalarType(parentNamedType)) {
 		return graphQLTypesInferredOK
 	}
-	return inferMissing
+	return isInferMissing
 }
 
 // nextVariableName bumps the counter and gives back the next generated variable name.

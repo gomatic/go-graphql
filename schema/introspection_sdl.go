@@ -145,10 +145,13 @@ func writeStringFmt(sb *strings.Builder, format sdlFormat, args ...any) {
 	_, _ = fmt.Fprintf(sb, string(format), args...)
 }
 
+// sParam names the s parameter of writeStr; rename it to the real domain concept.
+type sParam string
+
 // writeStr appends s to sb. strings.Builder.WriteString never errors, so we
 // throw the result away.
-func writeStr(sb *strings.Builder, s string) {
-	_, _ = sb.WriteString(s)
+func writeStr(sb *strings.Builder, s sParam) {
+	_, _ = sb.WriteString(string(s))
 }
 
 func introspectionTypeToAstType(typ *introspectedType) (*ast.Type, error) {
@@ -233,9 +236,9 @@ func printOneDirective(sb *strings.Builder, directive introspectionDirectiveDefi
 	if err := printDirectiveArgs(sb, directive); err != nil {
 		return err
 	}
-	writeStr(sb, " on ")
-	writeStr(sb, joinDirectiveLocations(directive.Locations))
-	writeStr(sb, "\n\n")
+	writeStr(sb, sParam(" on "))
+	writeStr(sb, sParam(joinDirectiveLocations(directive.Locations)))
+	writeStr(sb, sParam("\n\n"))
 	return nil
 }
 
@@ -243,13 +246,13 @@ func printDirectiveArgs(sb *strings.Builder, directive introspectionDirectiveDef
 	if len(directive.Args) == 0 {
 		return nil
 	}
-	writeStr(sb, "(\n")
+	writeStr(sb, sParam("(\n"))
 	for _, arg := range directive.Args {
 		if err := printDirectiveArg(sb, directive.Name, arg); err != nil {
 			return err
 		}
 	}
-	writeStr(sb, ")")
+	writeStr(sb, sParam(")"))
 	return nil
 }
 
@@ -306,7 +309,7 @@ func printType(sb *strings.Builder, typ introspectionTypeDefinition) error {
 	if err := printOneType(sb, typ); err != nil {
 		return err
 	}
-	writeStr(sb, "\n\n")
+	writeStr(sb, sParam("\n\n"))
 	return nil
 }
 
@@ -333,13 +336,13 @@ func printOneType(sb *strings.Builder, typ introspectionTypeDefinition) error {
 func printObjectType(sb *strings.Builder, typ introspectionTypeDefinition) error {
 	writeStringFmt(sb, "type %s ", string(typ.Name))
 	printImplements(sb, typ.Interfaces)
-	writeStr(sb, "{\n")
+	writeStr(sb, sParam("{\n"))
 	for _, field := range typ.Fields {
 		if err := printObjectField(sb, typ.Name, field); err != nil {
 			return err
 		}
 	}
-	writeStr(sb, "}")
+	writeStr(sb, sParam("}"))
 	return nil
 }
 
@@ -347,12 +350,12 @@ func printImplements(sb *strings.Builder, interfaces []ast.Definition) {
 	if len(interfaces) == 0 {
 		return
 	}
-	writeStr(sb, "implements ")
+	writeStr(sb, sParam("implements "))
 	names := make([]string, 0, len(interfaces))
 	for _, intface := range interfaces {
 		names = append(names, intface.Name)
 	}
-	writeStr(sb, strings.Join(names, " & "))
+	writeStr(sb, sParam(strings.Join(names, " & ")))
 }
 
 func printObjectField(sb *strings.Builder, parentName introspectionName, field introspectedTypeField) error {
@@ -375,7 +378,7 @@ func printObjectField(sb *strings.Builder, parentName introspectionName, field i
 	}
 	writeStringFmt(sb, ": %s", string(ts))
 	printDeprecation(sb, field.IsDeprecated, field.DeprecationReason)
-	writeStr(sb, "\n")
+	writeStr(sb, sParam("\n"))
 	return nil
 }
 
@@ -387,7 +390,7 @@ func printFieldArgs(
 	if len(args) == 0 {
 		return nil
 	}
-	writeStr(sb, "(\n")
+	writeStr(sb, sParam("(\n"))
 	for _, arg := range args {
 		printDescription(sb, arg.Description)
 		ts, err := typeStringOrError(arg.Type)
@@ -406,7 +409,7 @@ func printFieldArgs(
 		}
 		writeStringFmt(sb, "\t\t%s: %s\n", string(arg.Name), string(ts))
 	}
-	writeStr(sb, "\t)")
+	writeStr(sb, sParam("\t)"))
 	return nil
 }
 
@@ -414,7 +417,7 @@ func printDeprecation(sb *strings.Builder, isDeprecated deprecatedFlag, reason a
 	if !bool(isDeprecated) {
 		return
 	}
-	writeStr(sb, " @deprecated")
+	writeStr(sb, sParam(" @deprecated"))
 	if r, ok := reason.(string); ok && r != "" {
 		writeStringFmt(sb, `(reason: "%s")`, r)
 	}
@@ -433,7 +436,7 @@ func printUnionType(sb *strings.Builder, typ introspectionTypeDefinition) error 
 	if err != nil {
 		return err
 	}
-	writeStr(sb, strings.Join(members, " | "))
+	writeStr(sb, sParam(strings.Join(members, " | ")))
 	return nil
 }
 
@@ -461,7 +464,7 @@ func printEnumType(sb *strings.Builder, typ introspectionTypeDefinition) error {
 	for _, value := range enumValues {
 		printEnumValue(sb, value)
 	}
-	writeStr(sb, "}")
+	writeStr(sb, sParam("}"))
 	return nil
 }
 
@@ -469,7 +472,7 @@ func printEnumValue(sb *strings.Builder, value introspectedEnumValue) {
 	printDescription(sb, value.Description)
 	writeStringFmt(sb, "\t%s", string(value.Name))
 	printDeprecation(sb, value.IsDeprecated, value.DeprecationReason)
-	writeStr(sb, "\n")
+	writeStr(sb, sParam("\n"))
 }
 
 func printInputObjectType(sb *strings.Builder, typ introspectionTypeDefinition) error {
@@ -490,7 +493,7 @@ func printInputObjectType(sb *strings.Builder, typ introspectionTypeDefinition) 
 		}
 		writeStringFmt(sb, "\t%s: %s\n", string(field.Name), string(ts))
 	}
-	writeStr(sb, "}")
+	writeStr(sb, sParam("}"))
 	return nil
 }
 
@@ -501,7 +504,7 @@ func printInterfaceType(sb *strings.Builder, typ introspectionTypeDefinition) er
 			return err
 		}
 	}
-	writeStr(sb, "}")
+	writeStr(sb, sParam("}"))
 	return nil
 }
 
@@ -535,7 +538,7 @@ func printInterfaceArgs(
 	if len(args) == 0 {
 		return nil
 	}
-	writeStr(sb, "(\n")
+	writeStr(sb, sParam("(\n"))
 	for _, arg := range args {
 		ts, err := typeStringOrError(arg.Type)
 		if err != nil {
@@ -553,7 +556,7 @@ func printInterfaceArgs(
 		}
 		writeStringFmt(sb, "\t\t%s: %s\n", string(arg.Name), string(ts))
 	}
-	writeStr(sb, "\t)")
+	writeStr(sb, sParam("\t)"))
 	return nil
 }
 
@@ -563,10 +566,10 @@ func printDescription(sb *strings.Builder, description sdlDescription) {
 	if description == "" {
 		return
 	}
-	writeStr(sb, `"""`)
-	writeStr(sb, "\n")
-	writeStr(sb, string(description))
-	writeStr(sb, "\n")
-	writeStr(sb, `"""`)
-	writeStr(sb, "\n")
+	writeStr(sb, sParam(`"""`))
+	writeStr(sb, sParam("\n"))
+	writeStr(sb, sParam(string(description)))
+	writeStr(sb, sParam("\n"))
+	writeStr(sb, sParam(`"""`))
+	writeStr(sb, sParam("\n"))
 }

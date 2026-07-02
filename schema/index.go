@@ -70,17 +70,22 @@ func schemaFromDocument(doc *ast.SchemaDocument) *ast.Schema {
 	for _, def := range doc.Definitions {
 		g.Types[def.Name] = def
 	}
-	g.Query = rootDefinition(g, doc, ast.Query, string(typeNameQuery))
-	g.Mutation = rootDefinition(g, doc, ast.Mutation, string(typeNameMutation))
-	g.Subscription = rootDefinition(g, doc, ast.Subscription, string(typeNameSubscription))
+	g.Query = rootDefinition(g, doc, ast.Query, typeNameQuery)
+	g.Mutation = rootDefinition(g, doc, ast.Mutation, typeNameMutation)
+	g.Subscription = rootDefinition(g, doc, ast.Subscription, typeNameSubscription)
 	return g
 }
 
-func rootDefinition(g *ast.Schema, doc *ast.SchemaDocument, op ast.Operation, conventional string) *ast.Definition {
+func rootDefinition(
+	g *ast.Schema,
+	doc *ast.SchemaDocument,
+	op ast.Operation,
+	conventional TypeNameInput,
+) *ast.Definition {
 	if name := operationTypeName(doc, op); name != "" {
 		return g.Types[name]
 	}
-	return g.Types[conventional]
+	return g.Types[string(conventional)]
 }
 
 func operationTypeName(doc *ast.SchemaDocument, op ast.Operation) string {
