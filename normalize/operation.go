@@ -79,15 +79,23 @@ func sanitizeName(name OperationName) OperationName {
 	if name == "" {
 		return ""
 	}
-	out := strings.Map(sanitizeRune, string(name))
+	var b strings.Builder
+	for _, r := range string(name) {
+		// strings.Builder.WriteRune never errors, so we throw the result away.
+		_, _ = b.WriteRune(rune(sanitizeRune(nameRune(r))))
+	}
+	out := b.String()
 	if out[0] >= '0' && out[0] <= '9' {
 		out = "_" + out
 	}
 	return OperationName(out)
 }
 
+// nameRune is a single character of a candidate operation name.
+type nameRune rune
+
 // sanitizeRune keeps GraphQL name characters and turns everything else into '_'.
-func sanitizeRune(r rune) rune {
+func sanitizeRune(r nameRune) nameRune {
 	if r == '_' || (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 		return r
 	}

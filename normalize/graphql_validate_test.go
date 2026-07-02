@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
@@ -63,4 +64,11 @@ func TestQueryUsesBuiltinIntrospectionDetection(t *testing.T) {
 			assert.Equal(t, tt.want, bool(queryUsesBuiltinIntrospection(doc)))
 		})
 	}
+}
+
+func TestValidateAgainstGraphQLSchemaNilSchemaSkips(t *testing.T) {
+	t.Parallel()
+
+	doc := mustParseQuery(t, `{ anything }`)
+	require.NoError(t, validateAgainstGraphQLSchema(nilSchemaIndex{}, doc))
 }

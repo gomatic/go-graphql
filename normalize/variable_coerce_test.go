@@ -162,3 +162,25 @@ func TestScalarPredicates(t *testing.T) {
 	assert.True(t, bool(shouldCoerceNamedTypeToEmptyObject("AccountPatch")))
 	assert.False(t, bool(shouldCoerceNamedTypeToEmptyObject("PlainType")))
 }
+
+func TestTerminalNamedTypeName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   gqlTypeName
+		want namedTypeName
+	}{
+		{name: "scalar non-null", in: "String!", want: "String"},
+		{name: "list strips wrappers", in: "[String!]", want: "String"},
+		{name: "nested list strips wrappers", in: "[[Int!]!]", want: "Int"},
+		{name: "input", in: "V1AccountFilter", want: "V1AccountFilter"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, terminalNamedTypeName(tt.in))
+		})
+	}
+}

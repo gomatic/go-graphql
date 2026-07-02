@@ -14,6 +14,7 @@ import (
 //
 // When schemaHint is non-empty and the composite index has it, we use that schema
 // directly and skip root-field detection (the per-envelope schema from NDJSON replay).
+// Otherwise the owning schema is detected from the document's root fields.
 func resolveCompositeIndex(idx schema.Index, doc *ast.QueryDocument, schemaHint schema.Schema) (schema.Index, error) {
 	c, ok := idx.(*schema.Composite)
 	if !ok || c == nil {
@@ -24,12 +25,6 @@ func resolveCompositeIndex(idx schema.Index, doc *ast.QueryDocument, schemaHint 
 			return sub, nil
 		}
 	}
-	return detectAndResolveSchema(c, doc)
-}
-
-// detectAndResolveSchema figures out the owning schema from the document's root
-// fields and returns its index.
-func detectAndResolveSchema(c *schema.Composite, doc *ast.QueryDocument) (schema.Index, error) {
 	detected, err := c.DetectSchema(rootQueryFieldNamesForSchemaDetect(doc))
 	if err != nil {
 		return nil, err

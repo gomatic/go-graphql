@@ -143,3 +143,9 @@ type BomResult { id: ID }`)
 		assert.Equal(t, schemaBom, result.Schema())
 	})
 }
+
+func TestRootQueryFieldNamesNilDocument(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, rootQueryFieldNamesForSchemaDetect(nil))
+}

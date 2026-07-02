@@ -12,8 +12,8 @@ import (
 
 func namePtr(s introspectionName) *introspectionName { return &s }
 
-func scalarRef(name introspectionName) *introspectedType {
-	return &introspectedType{Kind: "SCALAR", Name: namePtr(name)}
+func scalarRef(name introspectionName) introspectedType {
+	return introspectedType{Kind: "SCALAR", Name: namePtr(name)}
 }
 
 func TestIntrospectionTypeToAstType(t *testing.T) {
@@ -21,25 +21,25 @@ func TestIntrospectionTypeToAstType(t *testing.T) {
 
 	tests := []struct {
 		wantErr error
-		typ     *introspectedType
+		typ     introspectedType
 		name    string
 		want    string
 	}{
-		{name: "nil type", typ: nil, wantErr: ErrIntrospectionNilType},
+		{name: "missing type", typ: introspectedType{}, wantErr: ErrIntrospectionNilType},
 		{
 			name:    "named missing name",
-			typ:     &introspectedType{Kind: "SCALAR", Name: nil},
+			typ:     introspectedType{Kind: "SCALAR", Name: nil},
 			wantErr: ErrIntrospectionMissingName,
 		},
 		{
 			name:    "named empty name",
-			typ:     &introspectedType{Kind: "SCALAR", Name: namePtr("")},
+			typ:     introspectedType{Kind: "SCALAR", Name: namePtr("")},
 			wantErr: ErrIntrospectionMissingName,
 		},
-		{name: "named", typ: &introspectedType{Kind: "SCALAR", Name: namePtr("String")}, want: "String"},
+		{name: "named", typ: introspectedType{Kind: "SCALAR", Name: namePtr("String")}, want: "String"},
 		{
 			name: "non null",
-			typ: &introspectedType{
+			typ: introspectedType{
 				Kind:   introspectionKindNonNull,
 				OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("ID")},
 			},
@@ -47,7 +47,7 @@ func TestIntrospectionTypeToAstType(t *testing.T) {
 		},
 		{
 			name: "list",
-			typ: &introspectedType{
+			typ: introspectedType{
 				Kind:   introspectionKindList,
 				OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("String")},
 			},
@@ -55,12 +55,12 @@ func TestIntrospectionTypeToAstType(t *testing.T) {
 		},
 		{
 			name: "unknown wrapper kind unwraps",
-			typ:  &introspectedType{Kind: "WEIRD", OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("Int")}},
+			typ:  introspectedType{Kind: "WEIRD", OfType: &introspectedType{Kind: "SCALAR", Name: namePtr("Int")}},
 			want: "Int",
 		},
 		{
 			name: "wrapper inner error",
-			typ: &introspectedType{
+			typ: introspectedType{
 				Kind:   introspectionKindNonNull,
 				OfType: &introspectedType{Kind: "SCALAR", Name: nil},
 			},
@@ -118,16 +118,16 @@ func TestPrintOneTypeUnsupportedKind(t *testing.T) {
 	require.ErrorIs(t, err, ErrIntrospectionUnsupportedKind)
 }
 
-// nilTypeField is a field with a nil type reference, which makes typeStringOrError
-// fail so the SDL printers surface ErrIntrospectionSDL.
-func nilTypeField(name introspectionName) introspectedTypeField {
-	return introspectedTypeField{Name: name, Type: nil}
+// missingTypeField is a field with a missing (zero) type reference, which makes
+// typeStringOrError fail so the SDL printers surface ErrIntrospectionSDL.
+func missingTypeField(name introspectionName) introspectedTypeField {
+	return introspectedTypeField{Name: name}
 }
 
 func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 	t.Parallel()
 
-	badArg := []introspectionInputField{{Name: "a", Type: nil}}
+	badArg := []introspectionInputField{{Name: "a"}}
 
 	tests := []struct {
 		run  func(sb *strings.Builder) error
@@ -141,7 +141,7 @@ func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 					introspectionTypeDefinition{
 						Name:   "O",
 						Kind:   ast.Object,
-						Fields: []introspectedTypeField{nilTypeField("f")},
+						Fields: []introspectedTypeField{missingTypeField("f")},
 					},
 				)
 			},
@@ -167,7 +167,7 @@ func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 					introspectionTypeDefinition{
 						Name:        "I",
 						Kind:        ast.InputObject,
-						InputFields: []introspectionInputField{{Name: "x", Type: nil}},
+						InputFields: []introspectionInputField{{Name: "x"}},
 					},
 				)
 			},
@@ -180,7 +180,7 @@ func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 					introspectionTypeDefinition{
 						Name:   "N",
 						Kind:   ast.Interface,
-						Fields: []introspectedTypeField{nilTypeField("f")},
+						Fields: []introspectedTypeField{missingTypeField("f")},
 					},
 				)
 			},
@@ -201,7 +201,7 @@ func TestSDLPrintersWrapTypeErrors(t *testing.T) {
 		{
 			name: "union member type",
 			run: func(sb *strings.Builder) error {
-				raw, _ := json.Marshal([]*introspectedType{{Kind: "SCALAR", Name: nil}})
+				raw, _ := json.Marshal([]introspectedType{{Kind: "SCALAR", Name: nil}})
 				return printOneType(sb, introspectionTypeDefinition{Name: "U", Kind: ast.Union, PossibleTypes: raw})
 			},
 		},
@@ -223,7 +223,7 @@ func TestPrintDirectivePropagatesArgTypeError(t *testing.T) {
 	err := printDirectives(&sb, []introspectionDirectiveDefinition{
 		{
 			Name:      "d",
-			Args:      []introspectionDirectiveArg{{Name: "a", Type: nil}},
+			Args:      []introspectionDirectiveArg{{Name: "a"}},
 			Locations: []ast.DirectiveLocation{"FIELD"},
 		},
 	})

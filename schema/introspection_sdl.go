@@ -66,7 +66,7 @@ type introspectionTypeDefinition struct {
 // introspectedTypeField is one field on an OBJECT or INTERFACE type.
 type introspectedTypeField struct {
 	DeprecationReason any                       `json:"deprecation_reason"`
-	Type              *introspectedType         `json:"type"`
+	Type              introspectedType          `json:"type"`
 	Description       sdlDescription            `json:"description"`
 	Name              introspectionName         `json:"name"`
 	Args              []introspectionInputField `json:"args"`
@@ -92,7 +92,7 @@ type introspectionDirectiveDefinition struct {
 // introspectionDirectiveArg is one argument on a directive definition.
 type introspectionDirectiveArg struct {
 	DefaultValue any               `json:"default_value"`
-	Type         *introspectedType `json:"type"`
+	Type         introspectedType  `json:"type"`
 	Description  sdlDescription    `json:"description"`
 	Name         introspectionName `json:"name"`
 }
@@ -100,16 +100,26 @@ type introspectionDirectiveArg struct {
 // introspectionInputField is an input value — a field arg or an input object field.
 type introspectionInputField struct {
 	DefaultValue any               `json:"default_value"`
-	Type         *introspectedType `json:"type"`
+	Type         introspectedType  `json:"type"`
 	Description  sdlDescription    `json:"description"`
 	Name         introspectionName `json:"name"`
 }
 
-// introspectedType is a __Type reference — a named type, or a LIST/NON_NULL wrapper.
+// introspectedType is a __Type reference — a named type, or a LIST/NON_NULL
+// wrapper. It moves by value: it's a small, read-only JSON node whose zero value
+// stands in for a missing (JSON null) type reference. OfType stays a pointer only
+// because the type is recursive; a shallow copy still shares the same chain, which
+// is fine because nothing mutates it.
 type introspectedType struct {
 	Name   *introspectionName  `json:"name"`
 	OfType *introspectedType   `json:"of_type"`
 	Kind   introspectionKindID `json:"kind"`
+}
+
+// isMissing reports whether the reference is the zero value — what a JSON null or
+// absent type field decodes to.
+func (t introspectedType) isMissing() bool {
+	return t == introspectedType{}
 }
 
 const (
@@ -154,8 +164,8 @@ func writeStr(sb *strings.Builder, s sdlText) {
 	_, _ = sb.WriteString(string(s))
 }
 
-func introspectionTypeToAstType(typ *introspectedType) (*ast.Type, error) {
-	if typ == nil {
+func introspectionTypeToAstType(typ introspectedType) (*ast.Type, error) {
+	if typ.isMissing() {
 		return nil, ErrIntrospectionNilType.With(nil)
 	}
 	if typ.OfType == nil {
@@ -164,15 +174,15 @@ func introspectionTypeToAstType(typ *introspectedType) (*ast.Type, error) {
 	return wrappedAstType(typ)
 }
 
-func namedAstType(typ *introspectedType) (*ast.Type, error) {
+func namedAstType(typ introspectedType) (*ast.Type, error) {
 	if typ.Name == nil || string(*typ.Name) == "" {
 		return nil, ErrIntrospectionMissingName.With(nil)
 	}
 	return &ast.Type{NamedType: string(*typ.Name)}, nil
 }
 
-func wrappedAstType(typ *introspectedType) (*ast.Type, error) {
-	inner, err := introspectionTypeToAstType(typ.OfType)
+func wrappedAstType(typ introspectedType) (*ast.Type, error) {
+	inner, err := introspectionTypeToAstType(*typ.OfType)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +198,7 @@ func wrappedAstType(typ *introspectedType) (*ast.Type, error) {
 	}
 }
 
-func typeStringOrError(t *introspectedType) (typeRefString, error) {
+func typeStringOrError(t introspectedType) (typeRefString, error) {
 	at, err := introspectionTypeToAstType(t)
 	if err != nil {
 		return "", err
@@ -425,7 +435,7 @@ func printDeprecation(sb *strings.Builder, isDeprecated deprecatedFlag, reason a
 
 func printUnionType(sb *strings.Builder, typ introspectionTypeDefinition) error {
 	writeStringFmt(sb, "union %s =", string(typ.Name))
-	var possible []*introspectedType
+	var possible []introspectedType
 	if err := unmarshalJSONArrayOrNull(typ.PossibleTypes, &possible, unmarshalContext("possible_types "+string(typ.Name))); err != nil {
 		return err
 	}
@@ -440,7 +450,7 @@ func printUnionType(sb *strings.Builder, typ introspectionTypeDefinition) error 
 	return nil
 }
 
-func unionMembers(possible []*introspectedType, name introspectionName) ([]string, error) {
+func unionMembers(possible []introspectedType, name introspectionName) ([]string, error) {
 	members := make([]string, 0, len(possible))
 	for _, pt := range possible {
 		ts, err := typeStringOrError(pt)

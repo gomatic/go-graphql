@@ -20,7 +20,7 @@ type Result struct {
 	query         QueryResult
 	schema        schema.Schema
 	hasVars       bool
-	normalized    bool
+	isNormalized  bool
 }
 
 // HasVars reports whether the query has any variables.
@@ -44,7 +44,7 @@ func (r Result) FieldPathsByName() map[string][]string {
 
 // IsNormalized reports whether we actually normalized the query.
 func (r Result) IsNormalized() bool {
-	return r.normalized
+	return r.isNormalized
 }
 
 // Query returns the normalized query text.
