@@ -899,7 +899,7 @@ func normalizeObjectChild(
 	isInferMissing inferMissingGraphQLTypes,
 ) error {
 	childPath := pathStr(string(path) + "." + child.Name)
-	childType := objectChildSchemaType(idx, base, nameParam(child.Name))
+	childType := objectChildSchemaType(idx, base, schema.FieldNameInput(child.Name))
 	if childType == "" && isInferMissing == graphQLTypesFromSchema {
 		return ErrGraphQLTypeUnresolved.With(
 			nil,
@@ -925,16 +925,13 @@ func normalizeObjectChild(
 	)
 }
 
-// nameParam names the name parameter of objectChildSchemaType; rename it to the real domain concept.
-type nameParam string
-
 // objectChildSchemaType resolves the schema type of an input-object field, and
 // skips the lookup entirely when the parent is an opaque JSON-like scalar.
-func objectChildSchemaType(idx schema.Index, base schemaType, name nameParam) schemaType {
+func objectChildSchemaType(idx schema.Index, base schemaType, name schema.FieldNameInput) schemaType {
 	if base == "" || bool(isOpaqueJSONLikeScalarType(namedTypeName(base))) {
 		return ""
 	}
-	return schemaType(idx.ArgType(schema.TypeNameInput(base), schema.FieldNameInput(string(name)), ""))
+	return schemaType(idx.ArgType(schema.TypeNameInput(base), name, ""))
 }
 
 // isOpaqueJSONLikeScalarType reports whether the named input type is a scalar
