@@ -15,7 +15,7 @@ const (
 	schemaStable schema.Schema = "stable"
 )
 
-func newComposite(t *testing.T) *schema.Composite {
+func newComposite(t *testing.T) schema.Composite {
 	t.Helper()
 
 	bomSDL := graphql.SDL(scalarsSDL + `

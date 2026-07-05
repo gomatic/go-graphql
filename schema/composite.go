@@ -29,11 +29,11 @@ var _ Index = Composite{}
 // in sdls ([ErrSchemaSDLMissing]); invalid SDL comes back as [graphql.ErrParse].
 // When several schemas declare the same root field, the one earliest in order
 // owns it.
-func NewComposite(order []Schema, sdls map[Schema]graphql.SDL) (*Composite, error) {
+func NewComposite(order []Schema, sdls map[Schema]graphql.SDL) (Composite, error) {
 	if len(order) == 0 {
-		return nil, ErrNoSchemas.With(nil)
+		return Composite{}, ErrNoSchemas.With(nil)
 	}
-	c := &Composite{
+	c := Composite{
 		indexes:    make(map[Schema]Index, len(order)),
 		order:      append([]Schema(nil), order...),
 		primary:    order[0],
@@ -42,11 +42,11 @@ func NewComposite(order []Schema, sdls map[Schema]graphql.SDL) (*Composite, erro
 	for _, s := range order {
 		sdl, ok := sdls[s]
 		if !ok {
-			return nil, ErrSchemaSDLMissing.With(nil, "schema", string(s))
+			return Composite{}, ErrSchemaSDLMissing.With(nil, "schema", string(s))
 		}
 		idx, err := NewIndex(s, sdl)
 		if err != nil {
-			return nil, err
+			return Composite{}, err
 		}
 		c.indexes[s] = idx
 		c.buildQueryFieldMap(s, idx)

@@ -22,7 +22,7 @@ type StableResult { data: String }
 `
 )
 
-func mustComposite(t *testing.T) *Composite {
+func mustComposite(t *testing.T) Composite {
 	t.Helper()
 	c, err := NewComposite(
 		[]Schema{"bom", "stable"},
@@ -265,7 +265,7 @@ func TestCompositeIndexInterface(t *testing.T) {
 func TestCompositeBuildQueryFieldMapNilSchema(t *testing.T) {
 	t.Parallel()
 
-	c := &Composite{
+	c := Composite{
 		indexes:    make(map[Schema]Index),
 		primary:    "bom",
 		queryField: make(fieldSchemaMap),

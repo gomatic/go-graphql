@@ -16,8 +16,8 @@ import (
 // directly and skip root-field detection (the per-envelope schema from NDJSON replay).
 // Otherwise the owning schema is detected from the document's root fields.
 func resolveCompositeIndex(idx schema.Index, doc *ast.QueryDocument, schemaHint schema.Schema) (schema.Index, error) {
-	c, ok := idx.(*schema.Composite)
-	if !ok || c == nil {
+	c, ok := idx.(schema.Composite)
+	if !ok {
 		return idx, nil
 	}
 	if schemaHint != "" {
