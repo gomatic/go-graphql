@@ -17,6 +17,6 @@ soft:
   - yze/invariant
 
 soft-baseline:
-  exhaustive: 9
+  exhaustive: 8
   yze/filesize: 4
   yze/invariant: 1
